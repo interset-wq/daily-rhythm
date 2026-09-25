@@ -65,43 +65,12 @@ class AlarmActivity : AppCompatActivity() {
     }
 
     private fun startAlert() {
-        runCatching {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            player = MediaPlayer().apply {
-                setDataSource(this@AlarmActivity, uri)
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                isLooping = true
-                prepare()
-                start()
-            }
-        }
-        val vib = if (Build.VERSION.SDK_INT >= 31) {
-            (getSystemService(VibratorManager::class.java)).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(VIBRATOR_SERVICE) as Vibrator
-        }
-        vibrator = vib
-        val pattern = longArrayOf(0, 600, 400)
-        if (Build.VERSION.SDK_INT >= 26) {
-            vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
-        } else {
-            @Suppress("DEPRECATION")
-            vib.vibrate(pattern, 0)
-        }
+        // 铃声/震动已由 AlarmSoundService（前台服务）在触发时立即播放；
+        // 页面可能因 ROM 拦截 FSI 而未自动弹出，因此不在此重复播放。
     }
 
     private fun stopAlert() {
-        player?.run { runCatching { stop(); release() } }
-        player = null
-        vibrator?.cancel()
-        vibrator = null
+        AlarmSoundService.stop(this)
     }
 
     private fun finishWithLog(taken: Boolean) {
