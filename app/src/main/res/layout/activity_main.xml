@@ -13,10 +13,12 @@
         <TextView
             android:id="@+id/tvTitleBar"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:minHeight="56dp"
             android:background="#1565C0"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp"
+            android:paddingBottom="10dp"
             android:text="@string/app_name"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
