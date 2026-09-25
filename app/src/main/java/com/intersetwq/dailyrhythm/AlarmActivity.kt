@@ -26,8 +26,8 @@ class AlarmActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        SystemBarsHelper.apply(this, findViewById(R.id.alarmRoot))
         setContentView(R.layout.activity_alarm)
+        SystemBarsHelper.apply(this, findViewById(R.id.alarmRoot))
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -58,6 +58,7 @@ class AlarmActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSkip).setOnClickListener { finishWithLog(false) }
         findViewById<Button>(R.id.btnSnooze).setOnClickListener {
             stopAlert()
+            AlarmNotifier.cancelAlarmNotification(this)
             SnoozeHelper.snooze(this, batchIds)
             finish()
         }
@@ -105,6 +106,7 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun finishWithLog(taken: Boolean) {
         stopAlert()
+        AlarmNotifier.cancelAlarmNotification(this)
         val reminders = ReminderStore.loadReminders(this)
         val now = System.currentTimeMillis()
         for (id in batchIds) {

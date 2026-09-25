@@ -34,7 +34,8 @@ class AlarmReceiver : BroadcastReceiver() {
         if (batch.isEmpty()) return
 
         if (batch.any { it.strength == AlarmStrength.FULL_ALARM }) {
-            AlarmActivity.launch(context, batch.map { it.id })
+            // 全屏意图通知：锁屏/熄屏直接弹全屏闹钟页（后台 startActivity 会被 ROM 拦截）
+            AlarmNotifier.showFullScreen(context, batch)
         } else {
             AlarmNotifier.show(context, batch)
         }
