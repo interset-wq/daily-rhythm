@@ -13,11 +13,13 @@
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:minHeight="56dp"
             android:background="#1565C0"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="10dp">
 
             <Button
                 android:id="@+id/btnBack"
@@ -109,18 +111,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="提醒时间（点击添加）"
+                android:text="提醒时间（点时间可修改 / 删除）"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tvTimes"
+            <HorizontalScrollView
+                android:id="@+id/hsTimes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
-                android:padding="8dp"
-                android:text="08:00"
-                android:textColor="#1565C0"
-                android:textSize="16sp" />
+                android:paddingVertical="4dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/llTimes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
 
             <!-- 星期选择 -->
             <LinearLayout

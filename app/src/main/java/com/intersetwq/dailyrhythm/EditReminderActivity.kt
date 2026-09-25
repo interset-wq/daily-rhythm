@@ -1,6 +1,5 @@
 package com.intersetwq.dailyrhythm
 
-import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -36,8 +35,9 @@ class EditReminderActivity : AppCompatActivity() {
     private lateinit var rbOnce: RadioButton
     private lateinit var etTitle: EditText
     private lateinit var etNote: EditText
-    private lateinit var tvTimes: TextView
     private lateinit var tvTimesLabel: TextView
+    private lateinit var hsTimes: View
+    private lateinit var llTimes: LinearLayout
     private lateinit var llWeek: LinearLayout
     private lateinit var weekChecks: List<CheckBox>
     private lateinit var rowStart: View
@@ -82,8 +82,9 @@ class EditReminderActivity : AppCompatActivity() {
         rbOnce = findViewById(R.id.rbOnce)
         etTitle = findViewById(R.id.etTitle)
         etNote = findViewById(R.id.etNote)
-        tvTimes = findViewById(R.id.tvTimes)
         tvTimesLabel = findViewById(R.id.tvTimesLabel)
+        hsTimes = findViewById(R.id.hsTimes)
+        llTimes = findViewById(R.id.llTimes)
         llWeek = findViewById(R.id.llWeek)
         weekChecks = listOf(
             findViewById(R.id.cbMon), findViewById(R.id.cbTue), findViewById(R.id.cbWed),
@@ -107,9 +108,6 @@ class EditReminderActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
         rgType.setOnCheckedChangeListener { _, _ -> refreshTypeUI() }
-
-        tvTimes.setOnClickListener { addTimePicker() }
-        tvTimesLabel.setOnClickListener { addTimePicker() }
 
         weekChecks.forEachIndexed { idx, cb ->
             cb.setOnCheckedChangeListener { _, checked ->
@@ -174,7 +172,7 @@ class EditReminderActivity : AppCompatActivity() {
         val once = rbOnce.isChecked
         // DAILY/WEEKLY 用多时间点；INTERVAL/ONCE 用单时间
         tvTimesLabel.visibility = if (daily || weekly) View.VISIBLE else View.GONE
-        tvTimes.visibility = if (daily || weekly) View.VISIBLE else View.GONE
+        hsTimes.visibility = if (daily || weekly) View.VISIBLE else View.GONE
         llWeek.visibility = if (weekly) View.VISIBLE else View.GONE
         rowInterval.visibility = if (interval) View.VISIBLE else View.GONE
         rowOnce.visibility = if (once) View.VISIBLE else View.GONE
@@ -183,32 +181,132 @@ class EditReminderActivity : AppCompatActivity() {
         refreshTimesText()
     }
 
+    /** 渲染时间 chip 列表：点 chip 可修改/删除，末尾"+ 添加"新增 */
     private fun refreshTimesText() {
-        tvTimes.text = times.joinToString("、")
+        llTimes.removeAllViews()
+        for (t in times) {
+            val chip = TextView(this).apply {
+                text = t
+                textSize = 15f
+                setTextColor(0xFF1565C0.toInt())
+                setBackgroundResource(R.drawable.bg_time_chip)
+                setPadding(dp(14), dp(6), dp(14), dp(6))
+                setOnClickListener { showTimeOptions(t) }
+            }
+            val lp = LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            lp.marginEnd = dp(8)
+            llTimes.addView(chip, lp)
+        }
+        // "+ 添加" chip
+        val add = TextView(this).apply {
+            text = "+ 添加"
+            textSize = 15f
+            setTextColor(0xFF546E7A.toInt())
+            setBackgroundResource(R.drawable.bg_time_chip)
+            setPadding(dp(14), dp(6), dp(14), dp(6))
+            setOnClickListener { addTimePicker() }
+        }
+        val lp = LinearLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        llTimes.addView(add, lp)
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    /** 点已有时间 chip：弹修改/删除选项 */
+    private fun showTimeOptions(t: String) {
+        val options = arrayOf("修改此时间", "删除此时间")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(t)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> editTime(t)
+                    1 -> {
+                        times.remove(t)
+                        if (times.isEmpty()) times.add("08:00")
+                        refreshTimesText()
+                    }
+                }
+            }
+            .show()
+    }
+
+    /** 修改某个已有时间点 */
+    private fun editTime(t: String) {
+        val old = OccurrenceCalculator.parseTime(t)
+        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+            .setHour(old.hour)
+            .setMinute(old.minute)
+            .setTitleText("修改提醒时间")
+            .build()
+        picker.addOnPositiveButtonClickListener {
+            val v = String.format("%02d:%02d", picker.hour, picker.minute)
+            if (v != t && v in times) {
+                android.widget.Toast.makeText(this, "该时间已存在", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                val idx = times.indexOf(t)
+                if (idx >= 0) { times[idx] = v; times.sort(); refreshTimesText() }
+            }
+        }
+        picker.show(supportFragmentManager, "edit_time")
     }
 
     private fun addTimePicker() {
         val t = OccurrenceCalculator.parseTime(times.last())
-        TimePickerDialog(this, { _, h, m ->
-            val v = String.format("%02d:%02d", h, m)
-            if (v !in times) { times.add(v); times.sort() }
-            refreshTimesText()
-        }, t.hour, t.minute, true).show()
+        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+            .setHour(t.hour)
+            .setMinute(t.minute)
+            .setTitleText("添加提醒时间")
+            .build()
+        picker.addOnPositiveButtonClickListener {
+            val v = String.format("%02d:%02d", picker.hour, picker.minute)
+            if (v in times) {
+                android.widget.Toast.makeText(this, "该时间已存在", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                times.add(v); times.sort(); refreshTimesText()
+            }
+        }
+        picker.show(supportFragmentManager, "add_time")
     }
 
     private fun pickTime(target: TextView) {
         val t = OccurrenceCalculator.parseTime(target.text.toString())
-        TimePickerDialog(this, { _, h, m ->
-            target.text = String.format("%02d:%02d", h, m)
-        }, t.hour, t.minute, true).show()
+        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+            .setHour(t.hour)
+            .setMinute(t.minute)
+            .setTitleText("选择时间")
+            .build()
+        picker.addOnPositiveButtonClickListener {
+            target.text = String.format("%02d:%02d", picker.hour, picker.minute)
+        }
+        picker.show(supportFragmentManager, "pick_time")
     }
 
     private fun pickDate() {
-        val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
-            startDate = LocalDate.of(y, m + 1, d)
+        // Material 底部弹窗日期选择（返回 UTC 毫秒，需转本地时区）
+        val picker = com.google.android.material.datepicker.MaterialDatePicker.Builder.datePicker()
+            .setTitleText("选择开始日期")
+            .setSelection(
+                java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+                    set(startDate.year, startDate.monthValue - 1, startDate.dayOfMonth, 0, 0, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }.timeInMillis
+            )
+            .build()
+        picker.addOnPositiveButtonClickListener { utcMillis ->
+            startDate = java.time.Instant.ofEpochMilli(utcMillis)
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
             tvStartDate.text = startDate.toString()
-        }, startDate.year, startDate.monthValue - 1, startDate.dayOfMonth)
-        dp.show()
+        }
+        picker.show(supportFragmentManager, "pick_date")
     }
 
     private fun save() {
