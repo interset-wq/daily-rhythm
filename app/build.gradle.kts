@@ -1,6 +1,15 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// 签名口令存 local.properties（已被 gitignore），keystore 单独保管
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) FileInputStream(f).use { load(it) }
 }
 
 android {
@@ -13,11 +22,25 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        // 只适配最主流的 arm64-v8a
+        ndk { abiFilters += listOf("arm64-v8a") }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("release.keystore")
+            storePassword = keystoreProps.getProperty("RELEASE_STORE_PASS", "dailyrhythm2026")
+            keyAlias = "dailyrhythm"
+            keyPassword = keystoreProps.getProperty("RELEASE_KEY_PASS", "dailyrhythm2026")
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

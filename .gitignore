@@ -8,3 +8,4 @@ temp/
 captures/
 .externalNativeBuild/
 .cxx/
+*.keystore
