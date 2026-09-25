@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 长按桌面图标：快速新建提醒 -->
+    <shortcut
+        android:shortcutId="new_reminder"
+        android:enabled="true"
+        android:icon="@drawable/ic_add"
+        android:shortcutShortLabel="@string/shortcut_new_reminder"
+        android:shortcutLongLabel="@string/shortcut_new_reminder">
+        <intent
+            android:action="com.intersetwq.dailyrhythm.NEW_REMINDER"
+            android:targetPackage="com.intersetwq.dailyrhythm"
+            android:targetClass="com.intersetwq.dailyrhythm.MainActivity" />
+    </shortcut>
+
+    <!-- 长按桌面图标：查看时间线 -->
+    <shortcut
+        android:shortcutId="timeline"
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_reminder"
+        android:shortcutShortLabel="@string/shortcut_timeline"
+        android:shortcutLongLabel="@string/shortcut_timeline">
+        <intent
+            android:action="com.intersetwq.dailyrhythm.OPEN_TIMELINE"
+            android:targetPackage="com.intersetwq.dailyrhythm"
+            android:targetClass="com.intersetwq.dailyrhythm.MainActivity" />
+    </shortcut>
+</shortcuts>

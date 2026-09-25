@@ -9,4 +9,6 @@
     <string name="snooze_10min">10分钟后再提醒</string>
     <string name="skip">跳过</string>
     <string name="stats">完成统计</string>
+    <string name="shortcut_new_reminder">新建提醒</string>
+    <string name="shortcut_timeline">查看时间线</string>
 </resources>

@@ -63,6 +63,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, EditReminderActivity::class.java))
         }
 
+        // 桌面长按快捷菜单：新建提醒 / 查看时间线
+        when (intent?.action) {
+            "com.intersetwq.dailyrhythm.NEW_REMINDER" ->
+                startActivity(Intent(this, EditReminderActivity::class.java))
+            "com.intersetwq.dailyrhythm.OPEN_TIMELINE" -> showPage("timeline")
+        }
+
         setupSettingsPage()
 
         // 底部 Tab：屏幕按钮切换页面，不依赖手势
@@ -154,6 +161,36 @@ class MainActivity : AppCompatActivity() {
         runCatching {
             val ver = packageManager.getPackageInfo(packageName, 0).versionName
             findViewById<TextView>(R.id.tvVersion).text = "版本 $ver"
+        }
+
+        // 应用信息：跳系统应用详情页（通知/权限/存储/卸载）
+        findViewById<View>(R.id.rowAppInfo).setOnClickListener {
+            val i = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(android.net.Uri.fromParts("package", packageName, null))
+            runCatching { startActivity(i) }
+        }
+
+        // 开源许可：展示 LICENSE（assets 内置，缺省给出仓库链接）
+        findViewById<View>(R.id.rowLicense).setOnClickListener {
+            val text = runCatching {
+                assets.open("LICENSE").bufferedReader().use { it.readText() }
+            }.getOrElse { "本项目使用 MIT 许可证发布。\n\nhttps://github.com/interset-wq/daily-rhythm" }
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("开源许可")
+                .setMessage(text)
+                .setPositiveButton("关闭", null)
+                .show()
+        }
+
+        // 功能介绍：折叠/展开
+        val tvFeatures = findViewById<TextView>(R.id.tvFeatures)
+        val tvToggle = findViewById<TextView>(R.id.tvFeaturesToggle)
+        tvFeatures.visibility = View.GONE
+        tvToggle.text = "展开 ▾"
+        findViewById<View>(R.id.rowFeatures).setOnClickListener {
+            val expanded = tvFeatures.visibility == View.VISIBLE
+            tvFeatures.visibility = if (expanded) View.GONE else View.VISIBLE
+            tvToggle.text = if (expanded) "展开 ▾" else "收起 ▴"
         }
     }
 
