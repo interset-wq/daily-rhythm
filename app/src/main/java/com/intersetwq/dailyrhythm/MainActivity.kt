@@ -159,6 +159,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // 前台自愈：荣耀等 ROM 的深度清理等同 force-stop，会静默清除已注册闹钟
+        // 且不发 BOOT 广播；回到前台时重排一次，成本极低（重复 set 覆盖旧闹钟）。
+        AlarmScheduler.rescheduleAll(this)
         refresh()
     }
 

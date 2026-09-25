@@ -43,10 +43,6 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
 
-        <activity
-            android:name=".StatsActivity"
-            android:exported="false" />
-
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />

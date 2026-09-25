@@ -20,7 +20,11 @@ class AlarmReceiver : BroadcastReceiver() {
         val store = ReminderStore.loadReminders(context)
         val reminder = store.firstOrNull { it.id == id } ?: return
 
-        // 同刻分组：A/B 药同一时间到点时合并呈现，一次操作全部处理。
+        // 同刻双闹钟竞态去重：同一发生点只呈现一次（后到的直接丢弃）
+        val occMillis = intent.getLongExtra(AlarmScheduler.EXTRA_OCC, -1L)
+        if (occMillis != -1L && AlarmScheduler.isOccurrenceHandled(context, id, occMillis)) return
+
+        // 同刻分组：多项提醒同一时间到点时合并呈现，一次操作全部处理。
         // 稍后触发的批次直接沿用，不重复分组。
         val batch = if (batchExtra.isNotEmpty()) {
             store.filter { it.id in batchExtra && it.enabled }
