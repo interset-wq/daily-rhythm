@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.NumberPicker
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Switch
@@ -241,17 +242,32 @@ class EditReminderActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * 系统闹钟风格滚轮时间选择：时/分转轮（循环滚动），确定后回调。
+     * 拦截 ROM 的 MaterialTimePicker 差异，行为在所有设备一致。
+     */
+    private fun showWheelTimePicker(title: String, hour: Int, minute: Int, onPicked: (Int, Int) -> Unit) {
+        val view = layoutInflater.inflate(R.layout.dialog_time_wheel, null)
+        val npHour = view.findViewById<NumberPicker>(R.id.npHour)
+        val npMinute = view.findViewById<NumberPicker>(R.id.npMinute)
+        npHour.minValue = 0; npHour.maxValue = 23
+        npMinute.minValue = 0; npMinute.maxValue = 59
+        npHour.value = hour; npMinute.value = minute
+        npHour.wrapSelectorWheel = true
+        npMinute.wrapSelectorWheel = true
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(view)
+            .setPositiveButton("确定") { _, _ -> onPicked(npHour.value, npMinute.value) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     /** 修改某个已有时间点 */
     private fun editTime(t: String) {
         val old = OccurrenceCalculator.parseTime(t)
-        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
-            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
-            .setHour(old.hour)
-            .setMinute(old.minute)
-            .setTitleText("修改提醒时间")
-            .build()
-        picker.addOnPositiveButtonClickListener {
-            val v = String.format("%02d:%02d", picker.hour, picker.minute)
+        showWheelTimePicker("修改提醒时间", old.hour, old.minute) { h, m ->
+            val v = String.format("%02d:%02d", h, m)
             if (v != t && v in times) {
                 android.widget.Toast.makeText(this, "该时间已存在", android.widget.Toast.LENGTH_SHORT).show()
             } else {
@@ -259,40 +275,25 @@ class EditReminderActivity : AppCompatActivity() {
                 if (idx >= 0) { times[idx] = v; times.sort(); refreshTimesText() }
             }
         }
-        picker.show(supportFragmentManager, "edit_time")
     }
 
     private fun addTimePicker() {
         val t = OccurrenceCalculator.parseTime(nowTimeStr())
-        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
-            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
-            .setHour(t.hour)
-            .setMinute(t.minute)
-            .setTitleText("添加提醒时间")
-            .build()
-        picker.addOnPositiveButtonClickListener {
-            val v = String.format("%02d:%02d", picker.hour, picker.minute)
+        showWheelTimePicker("添加提醒时间", t.hour, t.minute) { h, m ->
+            val v = String.format("%02d:%02d", h, m)
             if (v in times) {
                 android.widget.Toast.makeText(this, "该时间已存在", android.widget.Toast.LENGTH_SHORT).show()
             } else {
                 times.add(v); times.sort(); refreshTimesText()
             }
         }
-        picker.show(supportFragmentManager, "add_time")
     }
 
     private fun pickTime(target: TextView) {
         val t = OccurrenceCalculator.parseTime(target.text.toString())
-        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
-            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
-            .setHour(t.hour)
-            .setMinute(t.minute)
-            .setTitleText("选择时间")
-            .build()
-        picker.addOnPositiveButtonClickListener {
-            target.text = String.format("%02d:%02d", picker.hour, picker.minute)
+        showWheelTimePicker("选择时间", t.hour, t.minute) { h, m ->
+            target.text = String.format("%02d:%02d", h, m)
         }
-        picker.show(supportFragmentManager, "pick_time")
     }
 
     private fun pickDate() {

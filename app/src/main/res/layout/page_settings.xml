@@ -112,18 +112,15 @@
                 android:textColor="@color/text_primary"
                 android:textSize="15sp" />
 
-            <!-- 预设时长下拉选择（系统闹钟风格），选择即生效 -->
-            <AutoCompleteTextView
+            <!-- 预设时长选择（系统闹钟风格弹层：预设值+自定义），点击弹出 -->
+            <TextView
                 android:id="@+id/actSnooze"
-                android:layout_width="130dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_time_chip"
-                android:dropDownWidth="130dp"
-                android:dropDownVerticalOffset="6dp"
-                android:gravity="center"
-                android:inputType="none"
-                android:paddingHorizontal="12dp"
+                android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
+                android:text="10 分钟"
                 android:textColor="@color/brand_primary"
                 android:textSize="15sp"
                 android:textStyle="bold" />

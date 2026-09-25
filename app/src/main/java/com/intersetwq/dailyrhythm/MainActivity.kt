@@ -135,28 +135,42 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettingsPage() {
         val swDefaultAlarm = findViewById<Switch>(R.id.swDefaultAlarm)
         val swSound = findViewById<Switch>(R.id.swSound)
-        val actSnooze = findViewById<android.widget.AutoCompleteTextView>(R.id.actSnooze)
+        val actSnooze = findViewById<TextView>(R.id.actSnooze)
         val prefs = SettingsStore.defaults(this)
 
         swDefaultAlarm.isChecked = SettingsStore.defaultFullAlarm(this)
         swSound.isChecked = SettingsStore.soundEnabled(this)
 
-        // “稍后提醒”时长：系统闹钟风格的预设值下拉，选择即生效
+        // “稍后提醒”时长：系统闹钟风格弹层（预设值+自定义），选择即生效
         val snoozeOptions = listOf(1, 3, 5, 10, 15, 20, 30, 60)
-        val current = SettingsStore.snoozeMinutes(this)
-        actSnooze.setText(
-            if (snoozeOptions.contains(current)) "$current 分钟" else "$current 分钟（自定义）"
-        )
-        actSnooze.setAdapter(
-            android.widget.ArrayAdapter(
-                this,
-                android.R.layout.simple_list_item_1,
-                snoozeOptions.map { "$it 分钟" }
-            )
-        )
-        actSnooze.setOnItemClickListener { _, _, pos, _ ->
-            prefs.edit().putInt(SettingsStore.KEY_SNOOZE_MINUTES, snoozeOptions[pos]).apply()
-            actSnooze.setText("${snoozeOptions[pos]} 分钟", false)
+        actSnooze.text = "${SettingsStore.snoozeMinutes(this)} 分钟"
+        actSnooze.setOnClickListener {
+            val labels = snoozeOptions.map { "$it 分钟" }.toTypedArray()
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("“稍后提醒”时长")
+                .setItems(labels + "自定义…") { _, which ->
+                    if (which < labels.size) {
+                        prefs.edit().putInt(SettingsStore.KEY_SNOOZE_MINUTES, snoozeOptions[which]).apply()
+                        actSnooze.text = labels[which]
+                    } else {
+                        val input = android.widget.EditText(this).apply {
+                            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                            hint = "1-120"
+                            setText(SettingsStore.snoozeMinutes(this@MainActivity).toString())
+                        }
+                        androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("自定义分钟数")
+                            .setView(input)
+                            .setPositiveButton("确定") { _, _ ->
+                                val v = input.text.toString().toIntOrNull()?.coerceIn(1, 120) ?: 10
+                                prefs.edit().putInt(SettingsStore.KEY_SNOOZE_MINUTES, v).apply()
+                                actSnooze.text = "$v 分钟"
+                            }
+                            .setNegativeButton("取消", null)
+                            .show()
+                    }
+                }
+                .show()
         }
 
         swDefaultAlarm.setOnCheckedChangeListener { _, checked ->
