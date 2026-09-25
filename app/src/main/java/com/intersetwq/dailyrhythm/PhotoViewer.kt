@@ -21,7 +21,7 @@ object PhotoViewer {
         val bmp = BitmapFactory.decodeFile(file.absolutePath, opts)
         iv.setImageBitmap(bmp)
         AlertDialog.Builder(activity)
-            .setTitle("药盒照片")
+            .setTitle("照片")
             .setView(iv)
             .setPositiveButton("关闭", null)
             .show()

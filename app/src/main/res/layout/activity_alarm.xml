@@ -42,7 +42,7 @@
         android:layout_height="60dp"
         android:layout_marginTop="48dp"
         android:backgroundTint="#43A047"
-        android:text="已服用"
+        android:text="已完成"
         android:textColor="#FFFFFF"
         android:textSize="20sp" />
 

@@ -52,7 +52,7 @@
                 android:id="@+id/etTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="名称（如：降压药 A）"
+                android:hint="事项名称（如：喝药 / 晨练 / 开会）"
                 android:inputType="text"
                 android:textSize="16sp" />
 
@@ -61,7 +61,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="备注（如：饭后服用）"
+                android:hint="备注（如：饭后 / 每天 2 次）"
                 android:inputType="text" />
 
             <TextView
@@ -342,7 +342,7 @@
                     android:id="@+id/btnTakePhoto"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="拍药盒照片" />
+                    android:text="拍张照片备注" />
 
                 <TextView
                     android:id="@+id/tvPhotoName"

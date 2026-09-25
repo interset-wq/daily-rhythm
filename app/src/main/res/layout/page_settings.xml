@@ -145,7 +145,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="用药提醒 MedReminder"
+                android:text="作息提醒 DailyRhythm"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -163,7 +163,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:lineSpacingExtra="4dp"
-                android:text="· 四种重复模式：每天（可多时间点）/ 按星期 / 每隔 N 天 / 仅一次\n· 每条提醒可选普通通知或全屏强闹钟\n· 服药打卡记录与近 7 天按时率统计\n· 支持拍摄药盒照片，防止拿错药\n· 闹钟重启后自动恢复"
+                android:text="· 四种重复模式：每天（可多时间点）/ 按星期 / 每隔 N 天 / 仅一次\n· 每条提醒可选普通通知或全屏强闹钟\n· 打卡记录与近 7 天按时率统计\n· 支持拍照备注，一目了然\n· 同一时间的多项提醒合并呈现，一次处理\n· 闹钟重启后自动恢复"
                 android:textSize="13sp" />
 
             <TextView
