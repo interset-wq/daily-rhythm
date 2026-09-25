@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1565C0</color>
+    <!-- 视觉规范：主色 Modern Blue，中性底 + 白色扁平卡片 -->
+    <color name="brand_primary">#1976D2</color>
+    <color name="brand_primary_dark">#1565C0</color>
+    <color name="brand_primary_light">#E3F2FD</color>
+    <color name="bg_page">#F6F8FB</color>
+    <color name="text_primary">#1C1F26</color>
+    <color name="text_secondary">#8A9099</color>
+    <color name="card_stroke">#ECEFF3</color>
+    <color name="danger">#E53935</color>
+    <color name="ic_launcher_background">#1976D2</color>
 </resources>
