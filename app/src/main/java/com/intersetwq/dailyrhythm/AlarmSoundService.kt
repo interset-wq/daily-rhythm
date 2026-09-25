@@ -36,7 +36,7 @@ class AlarmSoundService : Service() {
     }
 
     private fun buildNotification(ids: List<Long>): Notification {
-        // 用静音渠道做前台通知，铃声由本服务播放，避免双重响铃；
+        // 用 LOW 静默渠道做前台通知占位，铃声由本服务播放；
         // 点通知体进入全屏闹钟页。
         val openAlarm = PendingIntent.getActivity(
             this, 4002,
@@ -45,13 +45,13 @@ class AlarmSoundService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        return NotificationCompat.Builder(this, AlarmNotifier.CHANNEL_MUTE)
+        return NotificationCompat.Builder(this, AlarmNotifier.CHANNEL_FGS)
             .setSmallIcon(R.drawable.ic_stat_reminder)
             .setContentTitle("闹钟响铃中")
             .setContentText("点击处理本次提醒")
-            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(openAlarm, true)
+            .setContentIntent(openAlarm)
             .setOngoing(true)
             .build()
     }

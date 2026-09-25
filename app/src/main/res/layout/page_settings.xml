@@ -126,6 +126,33 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <!-- 通知设置深链：横幅/声音/渠道重要性（渠道被 ROM 降级时在此手动改回"紧急"） -->
+        <LinearLayout
+            android:id="@+id/rowNotifSettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="通知设置"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="横幅、声音、渠道重要性 ›"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
         <!-- ===== 关于 ===== -->
         <TextView
             android:layout_width="wrap_content"

@@ -193,6 +193,13 @@ class MainActivity : AppCompatActivity() {
             runCatching { startActivity(i) }
         }
 
+        // 通知设置：跳系统通知页（横幅/声音/渠道重要性——渠道被 ROM 降级时在此改回"紧急"）
+        findViewById<View>(R.id.rowNotifSettings).setOnClickListener {
+            val i = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+            runCatching { startActivity(i) }
+        }
+
         // 开源许可：展示 LICENSE（assets 内置，缺省给出仓库链接）
         findViewById<View>(R.id.rowLicense).setOnClickListener {
             val text = runCatching {

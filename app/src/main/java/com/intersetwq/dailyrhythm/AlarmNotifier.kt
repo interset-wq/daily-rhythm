@@ -22,34 +22,37 @@ import androidx.core.app.NotificationManagerCompat
  */
 object AlarmNotifier {
 
-    private const val OLD_CHANNEL = "reminder"
-    const val CHANNEL_SOUND = "reminder_v2"
-    const val CHANNEL_MUTE = "reminder_mute"
+    // 历史渠道：v2/v3 均因"删建churn"被 ROM 降级并锁定重要性 → 一次性迁移到 v4，此后只建不删
+    private val LEGACY_CHANNELS = arrayOf(
+        "reminder", "reminder_v2", "reminder_mute", "reminder_v3", "reminder_mute_v3", "alarm_v2"
+    )
+    const val CHANNEL_SOUND = "reminder_v4"
+    const val CHANNEL_MUTE = "reminder_mute_v4"
+    const val CHANNEL_ALARM = "alarm_v4"
 
-    // 注意：Android 对"删除后同 ID 重建"的渠道会保留旧设置，
-    // 渠道被系统降级后必须换新 ID 才能恢复 HIGH —— 版本号随降级递增。
-    const val CHANNEL_ALARM = "alarm_v2"
+    /** 前台服务（响铃中）专用渠道：静默、状态栏常驻即可，不横幅不响铃。 */
+    const val CHANNEL_FGS = "alarm_service"
     const val ALARM_NOTIF_ID = 3001
 
     fun canNotify(ctx: Context): Boolean =
         Build.VERSION.SDK_INT < 33 ||
             ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-    /** 创建/修正通知渠道：有声（HIGH，横幅+铃声+震动）与无声两个。 */
+    /**
+     * 创建通知渠道：只在缺失时创建，绝不删建。
+     * 频繁"删除+重建"会被荣耀等 ROM 判为可疑行为，把渠道重要性锁定为 3（横幅被压制），
+     * 且 Android 对同 ID 重建保留旧设置——删建自愈只会雪上加霜。
+     * 渠道一旦被用户/ROM 降级，请在系统设置的渠道页手动改回"紧急"（设置页有入口）。
+     */
     fun ensureChannels(ctx: Context) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        // 删除旧版无声渠道，摆脱被锁定的降级配置
-        nm.deleteNotificationChannel(OLD_CHANNEL)
+        // 一次性迁移：清理历史版本渠道（不存在时为空操作）
+        for (id in LEGACY_CHANNELS) nm.deleteNotificationChannel(id)
 
-        // 荣耀等 ROM 会在异常/更新后自动把渠道降级（4→3），
-        // 低重要性会同时压制横幅与全屏意图 —— 发现阶段低于 HIGH 就删掉重建。
-        fun ensureHigh(id: String, build: () -> NotificationChannel) {
-            nm.getNotificationChannel(id)?.let {
-                if (it.importance < NotificationManager.IMPORTANCE_HIGH) {
-                    nm.deleteNotificationChannel(id)
-                }
+        fun ensure(id: String, name: String, importance: Int, init: NotificationChannel.() -> Unit) {
+            if (nm.getNotificationChannel(id) == null) {
+                nm.createNotificationChannel(NotificationChannel(id, name, importance).apply(init))
             }
-            nm.createNotificationChannel(build())
         }
 
         val soundAttrs = AudioAttributes.Builder()
@@ -58,39 +61,32 @@ object AlarmNotifier {
             .build()
         val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        ensureHigh(CHANNEL_SOUND) {
-            NotificationChannel(
-                CHANNEL_SOUND, "提醒（响铃）", NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                setSound(defaultSound, soundAttrs)
-                enableVibration(true)
-                enableLights(true)
-            }
+        ensure(CHANNEL_SOUND, "提醒（响铃）", NotificationManager.IMPORTANCE_HIGH) {
+            setSound(defaultSound, soundAttrs)
+            enableVibration(true)
+            enableLights(true)
         }
 
-        ensureHigh(CHANNEL_MUTE) {
-            NotificationChannel(
-                CHANNEL_MUTE, "提醒（静音）", NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                setSound(null, null)
-                enableVibration(true)
-            }
+        ensure(CHANNEL_MUTE, "提醒（静音）", NotificationManager.IMPORTANCE_HIGH) {
+            setSound(null, null)
+            enableVibration(true)
         }
 
         // 强提醒全屏闹钟渠道：闹钟铃声 + USAGE_ALARM（独立于通知音量，勿扰默认放行闹钟）
-        ensureHigh(CHANNEL_ALARM) {
-            NotificationChannel(
-                CHANNEL_ALARM, "强提醒（全屏闹钟）", NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                enableVibration(true)
-            }
+        ensure(CHANNEL_ALARM, "强提醒（全屏闹钟）", NotificationManager.IMPORTANCE_HIGH) {
+            setSound(
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            enableVibration(true)
+        }
+
+        // 前台服务常驻通知：LOW 静默（服务自己播铃声，通知只作状态栏占位）
+        ensure(CHANNEL_FGS, "闹钟响铃服务", NotificationManager.IMPORTANCE_LOW) {
+            setSound(null, null)
         }
     }
 

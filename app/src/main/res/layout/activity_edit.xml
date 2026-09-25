@@ -9,28 +9,27 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 顶部栏：屏幕内返回按钮，不依赖手势/物理返回键 -->
+        <!-- 顶部栏：屏幕内返回按钮，不依赖手势/物理返回键（样式与主页 header 统一） -->
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
-            android:background="#1565C0"
+            android:background="@color/brand_primary"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingHorizontal="8dp"
             android:paddingBottom="10dp">
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnBack"
-                android:layout_width="wrap_content"
+                android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:minWidth="0dp"
-                android:paddingHorizontal="12dp"
-                android:text="← 返回"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp" />
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_back"
+                app:tint="#FFFFFF"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
 
             <TextView
                 android:id="@+id/tvEditTitle"
@@ -40,7 +39,7 @@
                 android:layout_weight="1"
                 android:text="新建提醒"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
