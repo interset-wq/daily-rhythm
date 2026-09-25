@@ -23,7 +23,10 @@ import java.time.format.DateTimeFormatter
 class EditReminderActivity : AppCompatActivity() {
 
     private var editId: Long = -1L
-    private val times = mutableListOf("08:00")
+    private fun nowTimeStr(): String =
+        LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+
+    private val times = mutableListOf(nowTimeStr())
     private val weekDays = linkedSetOf(1, 2, 3, 4, 5, 6, 7)
     private var startDate: LocalDate = LocalDate.now()
     private var photoName: String = ""
@@ -70,6 +73,8 @@ class EditReminderActivity : AppCompatActivity() {
             // 应用全局默认：新建时强提醒开关取设置页的默认值
             swAlarm.isChecked = SettingsStore.defaultFullAlarm(this)
             tvStartDate.text = startDate.toString()
+            tvStartTime.text = nowTimeStr()
+            tvOnceTime.text = nowTimeStr()
             refreshTypeUI()
         }
     }
@@ -105,7 +110,7 @@ class EditReminderActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         // 屏幕内返回按钮，不依赖手势/物理返回键
-        findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<android.widget.ImageButton>(R.id.btnBack).setOnClickListener { finish() }
 
         rgType.setOnCheckedChangeListener { _, _ -> refreshTypeUI() }
 
@@ -258,7 +263,7 @@ class EditReminderActivity : AppCompatActivity() {
     }
 
     private fun addTimePicker() {
-        val t = OccurrenceCalculator.parseTime(times.last())
+        val t = OccurrenceCalculator.parseTime(nowTimeStr())
         val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
             .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
             .setHour(t.hour)

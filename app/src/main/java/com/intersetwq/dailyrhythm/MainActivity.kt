@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
-import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -136,25 +135,35 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettingsPage() {
         val swDefaultAlarm = findViewById<Switch>(R.id.swDefaultAlarm)
         val swSound = findViewById<Switch>(R.id.swSound)
-        val etSnooze = findViewById<EditText>(R.id.etSnooze)
+        val actSnooze = findViewById<android.widget.AutoCompleteTextView>(R.id.actSnooze)
         val prefs = SettingsStore.defaults(this)
 
         swDefaultAlarm.isChecked = SettingsStore.defaultFullAlarm(this)
         swSound.isChecked = SettingsStore.soundEnabled(this)
-        etSnooze.setText(SettingsStore.snoozeMinutes(this).toString())
+
+        // “稍后提醒”时长：系统闹钟风格的预设值下拉，选择即生效
+        val snoozeOptions = listOf(1, 3, 5, 10, 15, 20, 30, 60)
+        val current = SettingsStore.snoozeMinutes(this)
+        actSnooze.setText(
+            if (snoozeOptions.contains(current)) "$current 分钟" else "$current 分钟（自定义）"
+        )
+        actSnooze.setAdapter(
+            android.widget.ArrayAdapter(
+                this,
+                android.R.layout.simple_list_item_1,
+                snoozeOptions.map { "$it 分钟" }
+            )
+        )
+        actSnooze.setOnItemClickListener { _, _, pos, _ ->
+            prefs.edit().putInt(SettingsStore.KEY_SNOOZE_MINUTES, snoozeOptions[pos]).apply()
+            actSnooze.setText("${snoozeOptions[pos]} 分钟", false)
+        }
 
         swDefaultAlarm.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(SettingsStore.KEY_DEFAULT_FULL_ALARM, checked).apply()
         }
         swSound.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(SettingsStore.KEY_SOUND_ENABLED, checked).apply()
-        }
-        etSnooze.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                val v = etSnooze.text.toString().toIntOrNull()?.coerceIn(1, 120) ?: 10
-                etSnooze.setText(v.toString())
-                prefs.edit().putInt(SettingsStore.KEY_SNOOZE_MINUTES, v).apply()
-            }
         }
 
         // 版本号
