@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">用药提醒</string>
+    <string name="no_reminders">暂无提醒，点击 + 新建</string>
+    <string name="add_reminder">新建提醒</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="taken">已服用</string>
+    <string name="snooze_10min">10分钟后再提醒</string>
+    <string name="skip">跳过</string>
+    <string name="stats">服药统计</string>
+</resources>
