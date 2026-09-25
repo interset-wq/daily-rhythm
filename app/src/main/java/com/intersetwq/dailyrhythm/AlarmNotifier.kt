@@ -33,11 +33,15 @@ object AlarmNotifier {
         Build.VERSION.SDK_INT < 33 ||
             ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-    fun show(ctx: Context, reminder: Reminder) {
+    fun show(ctx: Context, reminder: Reminder) = show(ctx, listOf(reminder))
+
+    /** 同刻合并通知：一批到点的提醒合成一条，一次"已完成"全部打卡。 */
+    fun show(ctx: Context, batch: List<Reminder>) {
         ensureChannel(ctx)
         if (!canNotify(ctx)) return
+        if (batch.isEmpty()) return
 
-        val notifId = (reminder.id % Int.MAX_VALUE).toInt()
+        val notifId = (batch.first().id % Int.MAX_VALUE).toInt()
 
         // 打开主界面
         val openApp = PendingIntent.getActivity(
@@ -45,29 +49,32 @@ object AlarmNotifier {
             Intent(ctx, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        // “已服用”直接记录
+        // "已完成"直接记录整批
         val takenPi = PendingIntent.getBroadcast(
             ctx, notifId,
             Intent(ctx, TakenActionReceiver::class.java)
                 .setAction("com.intersetwq.dailyrhythm.TAKEN")
-                .putExtra(AlarmScheduler.EXTRA_REMINDER_ID, reminder.id),
+                .putExtra(AlarmScheduler.EXTRA_BATCH, batch.map { it.id }.toLongArray()),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val text = buildString {
-            append(reminder.title)
-            if (reminder.note.isNotBlank()) append("（").append(reminder.note).append("）")
+        val text = batch.joinToString("、") { r ->
+            buildString {
+                append(r.title)
+                if (r.note.isNotBlank()) append("（").append(r.note).append("）")
+            }
         }
 
         val notif = NotificationCompat.Builder(ctx, CHANNEL_REMINDER)
             .setSmallIcon(R.drawable.ic_stat_reminder)
-            .setContentTitle("提醒时间到")
+            .setContentTitle(if (batch.size == 1) "提醒时间到" else "提醒时间到（${batch.size} 项）")
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(openApp)
-            .addAction(R.drawable.ic_stat_reminder, "已服用", takenPi)
+            .addAction(R.drawable.ic_stat_reminder, "已完成", takenPi)
             .build()
 
         NotificationManagerCompat.from(ctx).notify(notifId, notif)

@@ -22,7 +22,7 @@ class AlarmActivity : AppCompatActivity() {
 
     private var player: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private var reminderId: Long = -1L
+    private var batchIds: List<Long> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +40,17 @@ class AlarmActivity : AppCompatActivity() {
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        reminderId = intent.getLongExtra(EXTRA_ID, -1L)
-        val reminder = ReminderStore.loadReminders(this).firstOrNull { it.id == reminderId }
-        findViewById<TextView>(R.id.tvTitle).text = reminder?.title ?: "提醒"
-        findViewById<TextView>(R.id.tvNote).text = reminder?.note ?: ""
+        batchIds = intent.getLongArrayExtra(EXTRA_IDS)?.toList()
+            ?: intent.getLongExtra(EXTRA_ID, -1L).takeIf { it != -1L }?.let { listOf(it) }
+            ?: emptyList()
+        val reminders = ReminderStore.loadReminders(this)
+            .filter { it.id in batchIds }
+        findViewById<TextView>(R.id.tvTitle).text =
+            if (reminders.size == 1) reminders.firstOrNull()?.title ?: "提醒"
+            else "本次 ${reminders.size} 项：" + reminders.joinToString("、") { it.title }
+        findViewById<TextView>(R.id.tvNote).text = reminders
+            .mapNotNull { it.note.takeIf { n -> n.isNotBlank() } }
+            .joinToString("；")
 
         startAlert()
 
@@ -51,7 +58,7 @@ class AlarmActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSkip).setOnClickListener { finishWithLog(false) }
         findViewById<Button>(R.id.btnSnooze).setOnClickListener {
             stopAlert()
-            SnoozeHelper.snooze(this, reminderId)
+            SnoozeHelper.snooze(this, batchIds)
             finish()
         }
     }
@@ -98,9 +105,12 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun finishWithLog(taken: Boolean) {
         stopAlert()
-        val reminder = ReminderStore.loadReminders(this).firstOrNull { it.id == reminderId }
-        if (reminder != null) {
-            ReminderStore.addLog(this, DoseLog(reminderId, reminder.title, System.currentTimeMillis(), taken))
+        val reminders = ReminderStore.loadReminders(this)
+        val now = System.currentTimeMillis()
+        for (id in batchIds) {
+            reminders.firstOrNull { it.id == id }?.let {
+                ReminderStore.addLog(this, DoseLog(id, it.title, now, taken))
+            }
         }
         finish()
     }
@@ -112,9 +122,12 @@ class AlarmActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_ID = "reminder_id"
-        fun launch(ctx: Context, id: Long) {
+        const val EXTRA_IDS = "reminder_ids"
+
+        /** 兼容单条；同刻分组时传多条。 */
+        fun launch(ctx: Context, ids: List<Long>) {
             val i = Intent(ctx, AlarmActivity::class.java)
-                .putExtra(EXTRA_ID, id)
+                .putExtra(EXTRA_IDS, ids.toLongArray())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(i)
         }

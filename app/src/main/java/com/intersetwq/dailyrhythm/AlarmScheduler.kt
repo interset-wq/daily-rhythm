@@ -15,6 +15,7 @@ import java.time.ZoneId
 object AlarmScheduler {
 
     const val EXTRA_REMINDER_ID = "reminder_id"
+    const val EXTRA_BATCH = "reminder_batch"
     private const val REQ_BASE = 100000
 
     fun canScheduleExact(ctx: Context): Boolean {
@@ -41,6 +42,34 @@ object AlarmScheduler {
         if (!r.enabled) return
         val next = OccurrenceCalculator.nextAfter(r, LocalDateTime.now()) ?: return
         setExact(ctx, reminderId, next, r.strength)
+    }
+
+    /**
+     * 同刻分组：一条闹钟触发时，收集“此刻同样到点”的其他提醒组成一批。
+     * 到点判定：该提醒的下一次触发时间落在 [now-容差, now+容差] 内
+     * （本就由闹钟唤醒，容差覆盖系统少许延迟）。
+     * 被并入批次的同伴闹钟取消并滚动到下一次，避免各自再单独响一次。
+     */
+    fun collectDueBatch(ctx: Context, triggeredId: Long): List<Reminder> {
+        val now = LocalDateTime.now()
+        val tolerance = java.time.Duration.ofMinutes(1)
+        val all = ReminderStore.loadReminders(ctx)
+        val batch = mutableListOf<Reminder>()
+        for (r in all) {
+            if (!r.enabled) continue
+            val next = OccurrenceCalculator.nextAfter(r, now.minusSeconds(30)) ?: continue
+            val due = !next.isAfter(now.plus(tolerance)) && !next.isBefore(now.minus(tolerance))
+            if (r.id == triggeredId || (due && r.id != triggeredId)) {
+                batch.add(r)
+                if (r.id != triggeredId) {
+                    // 同伴已并入本批：取消其闹钟并滚动到下一次
+                    cancel(ctx, r.id)
+                    val later = OccurrenceCalculator.nextAfter(r, now)
+                    if (later != null) setExact(ctx, r.id, later, r.strength)
+                }
+            }
+        }
+        return batch
     }
 
     fun cancel(ctx: Context, reminderId: Long) {
