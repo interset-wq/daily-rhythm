@@ -10,19 +10,38 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvTitleBar"
+        <LinearLayout
+            android:id="@+id/headerBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
             android:background="@color/brand_primary"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingHorizontal="20dp"
-            android:paddingBottom="10dp"
-            android:text="@string/app_name"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:paddingBottom="10dp">
+
+            <TextView
+                android:id="@+id/tvTitleBar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/app_name"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btnSort"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/sort_toggle"
+                android:padding="8dp"
+                android:src="@drawable/ic_sort_asc"
+                android:visibility="gone"
+                app:tint="#FFFFFF" />
+        </LinearLayout>
 
         <!-- Tab 1：提醒列表 -->
         <FrameLayout

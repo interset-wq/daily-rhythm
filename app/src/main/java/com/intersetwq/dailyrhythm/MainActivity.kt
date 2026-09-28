@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -34,11 +35,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTitleBar: TextView
     private lateinit var fab: FloatingActionButton
 
+    companion object {
+        private const val REQ_EXPORT = 1001
+        private const val REQ_IMPORT_FILE = 1002
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        // 品牌蓝 header 垫在状态栏后面（Android 15 edge-to-edge 兼容）
-        SystemBarsHelper.applyWithHeader(this, findViewById(R.id.tvTitleBar))
+        // 品牌蓝 header 垫在状态栏后面（Android 15 edge-to-edge 兼容）——
+        // insets 加到整个 headerBar 上，保证标题与排序按钮都在状态栏之下
+        SystemBarsHelper.applyWithHeader(this, findViewById(R.id.headerBar))
 
         tvEmpty = findViewById(R.id.tvEmpty)
         pageReminders = findViewById(R.id.pageReminders)
@@ -47,6 +54,16 @@ class MainActivity : AppCompatActivity() {
         pageTimeline = findViewById(R.id.pageTimeline)
         tvTitleBar = findViewById(R.id.tvTitleBar)
         fab = findViewById(R.id.fab)
+
+        // 排序切换按钮：升序/降序，偏好持久化
+        val btnSort = findViewById<ImageView>(R.id.btnSort)
+        btnSort.setOnClickListener {
+            val asc = !SettingsStore.reminderSortAsc(this)
+            SettingsStore.defaults(this).edit()
+                .putBoolean(SettingsStore.KEY_REMINDER_SORT_ASC, asc).apply()
+            btnSort.setImageResource(if (asc) R.drawable.ic_sort_asc else R.drawable.ic_sort_desc)
+            refresh()
+        }
 
         adapter = ReminderAdapter(
             onToggle = { r -> toggle(r) },
@@ -67,6 +84,8 @@ class MainActivity : AppCompatActivity() {
             "com.intersetwq.dailyrhythm.NEW_REMINDER" ->
                 startActivity(Intent(this, EditReminderActivity::class.java))
             "com.intersetwq.dailyrhythm.OPEN_TIMELINE" -> showPage("timeline")
+            // 常规启动：初始化首页状态（含排序按钮可见性），默认提醒页
+            else -> showPage("reminders")
         }
 
         setupSettingsPage()
@@ -107,6 +126,7 @@ class MainActivity : AppCompatActivity() {
         pageTimeline.visibility = if (page == "timeline") View.VISIBLE else View.GONE
         pageSettings.visibility = if (page == "settings") View.VISIBLE else View.GONE
         fab.visibility = if (reminders) View.VISIBLE else View.GONE
+        findViewById<ImageView>(R.id.btnSort).visibility = if (reminders) View.VISIBLE else View.GONE
         tvTitleBar.text = when (page) {
             "stats" -> getString(R.string.stats)
             "timeline" -> "时间线"
@@ -115,15 +135,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 时间线：今天 00:00 起未来 7 天的触发计划；已到点条目标注打卡状态，当日结束（0:00）才批量出队 */
+    /** 时间线：未来 7 天的触发计划；批量出队（默认）从今天 00:00 起算并标注打卡状态，立即出队则只显示未触发条目 */
     private fun refreshTimeline() {
         val now = java.time.LocalDateTime.now()
-        val startOfToday = java.time.LocalDate.now().atStartOfDay()
+        val batch = SettingsStore.timelineBatchDequeue(this)
+        val start = if (batch) java.time.LocalDate.now().atStartOfDay() else now
         val items = OccurrenceCalculator.upcoming(
-            ReminderStore.loadReminders(this), startOfToday, now.plusDays(7)
+            ReminderStore.loadReminders(this), start, now.plusDays(7)
         )
-        // 打卡记录按 (reminderId, 触发小时) 归并：用于时间线区分已完成/已跳过
-        val logs = ReminderStore.loadLogs(this)
+        // 打卡记录按 (reminderId, 触发时间同小时) 归并：用于时间线区分已完成/已跳过
+        val logs = if (batch) ReminderStore.loadLogs(this) else emptyList()
         val rv = findViewById<RecyclerView>(R.id.rvTimeline)
         if (rv.adapter == null) {
             rv.layoutManager = LinearLayoutManager(this)
@@ -183,6 +204,19 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putBoolean(SettingsStore.KEY_SOUND_ENABLED, checked).apply()
         }
 
+        // 时间线批量出队开关（默认开）：切换后即时刷新时间线
+        val swBatch = findViewById<Switch>(R.id.swBatchDequeue)
+        swBatch.isChecked = SettingsStore.timelineBatchDequeue(this)
+        swBatch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(SettingsStore.KEY_TIMELINE_BATCH_DEQUEUE, checked).apply()
+            refreshTimeline()
+        }
+
+        // 导出：系统"保存文件"对话框；同时提供复制到剪贴板
+        findViewById<TextView>(R.id.btnExport).setOnClickListener { exportReminders() }
+        // 导入：系统文件选择器或粘贴文本，解析预览后按 追加/覆盖/替换 三模式写入
+        findViewById<TextView>(R.id.btnImport).setOnClickListener { importReminders() }
+
         // 版本号
         runCatching {
             val ver = packageManager.getPackageInfo(packageName, 0).versionName
@@ -236,9 +270,170 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        val list = ReminderStore.loadReminders(this).sortedBy { it.id }
+        val now = java.time.LocalDateTime.now()
+        val asc = SettingsStore.reminderSortAsc(this)
+        // 按下次触发时间排序；无下次触发（禁用/过期）的排最后，组内按 id
+        fun nextOf(r: Reminder): java.time.LocalDateTime? = OccurrenceCalculator.nextAfter(r, now)
+        val list = ReminderStore.loadReminders(this).sortedWith(
+            compareBy(
+                { r: Reminder -> nextOf(r) == null },
+                { r: Reminder ->
+                    val n = nextOf(r)
+                    when {
+                        n == null -> 0L
+                        asc -> java.time.Duration.between(now, n).toMillis()
+                        else -> -java.time.Duration.between(now, n).toMillis()
+                    }
+                },
+                { it.id }
+            )
+        )
         adapter.submit(list)
         tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    // ===== 导入/导出 =====
+
+    private val gson = com.google.gson.Gson()
+    private var pendingImport: List<Reminder>? = null
+
+    private fun exportReminders() {
+        val json = gson.toJson(ReminderStore.loadReminders(this))
+        val choices = arrayOf("保存到文件…", "复制到剪贴板")
+        AlertDialog.Builder(this)
+            .setTitle("导出提醒（共 ${ReminderStore.loadReminders(this).size} 条）")
+            .setItems(choices) { _, which ->
+                when (which) {
+                    0 -> {
+                        pendingImport = null
+                        val i = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("application/json")
+                            .putExtra(Intent.EXTRA_TITLE, "dailyrhythm_export.json")
+                        startActivityForResult(i, REQ_EXPORT)
+                    }
+                    else -> {
+                        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("reminders", json))
+                        android.widget.Toast.makeText(this, "已复制 JSON 到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun importReminders() {
+        val choices = arrayOf("从文件选择…", "粘贴 JSON 文本")
+        AlertDialog.Builder(this)
+            .setTitle("导入提醒")
+            .setItems(choices) { _, which ->
+                when (which) {
+                    0 -> startActivityForResult(
+                        Intent(Intent.ACTION_OPEN_DOCUMENT)
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("application/json"), REQ_IMPORT_FILE
+                    )
+                    else -> {
+                        val input = android.widget.EditText(this).apply {
+                            hint = "粘贴导出的 JSON 数组"
+                            minLines = 4
+                            gravity = android.view.Gravity.TOP
+                        }
+                        AlertDialog.Builder(this)
+                            .setTitle("粘贴 JSON")
+                            .setView(input)
+                            .setPositiveButton("解析") { _, _ ->
+                                showImportPreview(input.text.toString())
+                            }
+                            .setNegativeButton("取消", null)
+                            .show()
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /** 解析并弹预览：条数+标题列表，选模式写入（替换需二次确认） */
+    private fun showImportPreview(json: String) {
+        val parsed = runCatching {
+            val type = object : com.google.gson.reflect.TypeToken<List<Reminder>>() {}.type
+            gson.fromJson<List<Reminder>>(json, type) ?: emptyList()
+        }.getOrElse {
+            android.widget.Toast.makeText(this, "解析失败：不是有效的提醒 JSON", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        if (parsed.isEmpty()) {
+            android.widget.Toast.makeText(this, "文件中没有提醒", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val preview = parsed.joinToString("\n") { "• ${it.title}（${it.timesOfDay.joinToString("/")}）" }
+        val modes = arrayOf("追加到现有提醒", "按 id 覆盖（同 id 更新，新 id 追加）", "完全替换（清空后导入）")
+        AlertDialog.Builder(this)
+            .setTitle("发现 ${parsed.size} 条提醒")
+            .setMessage(if (preview.length > 1200) preview.take(1200) + "\n…" else preview)
+            .setItems(modes) { _, which ->
+                if (which == 2) {
+                    AlertDialog.Builder(this)
+                        .setTitle("确认完全替换？")
+                        .setMessage("现有提醒将全部删除，且不可恢复（打卡记录保留）。")
+                        .setPositiveButton("替换") { _, _ -> applyImport(parsed, which) }
+                        .setNegativeButton("取消", null)
+                        .show()
+                } else {
+                    applyImport(parsed, which)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun applyImport(parsed: List<Reminder>, mode: Int) {
+        val current = ReminderStore.loadReminders(this)
+        val next = when (mode) {
+            0 -> { // 追加：id 冲突重新分配
+                val used = current.map { it.id }.toMutableSet()
+                current + parsed.map { r ->
+                    if (r.id in used) {
+                        var nid = System.currentTimeMillis()
+                        while (nid in used) nid++
+                        used.add(nid); r.copy(id = nid)
+                    } else { used.add(r.id); r }
+                }
+            }
+            1 -> { // 按 id 覆盖
+                val byId = current.associateBy { it.id }.toMutableMap()
+                parsed.forEach { byId[it.id] = it }
+                byId.values.sortedBy { it.id }
+            }
+            else -> parsed // 完全替换
+        }
+        ReminderStore.saveReminders(this, next)
+        AlarmScheduler.rescheduleAll(this)
+        refresh()
+        android.widget.Toast.makeText(this, "已导入 ${parsed.size} 条提醒", android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_OK || data?.data == null) return
+        when (requestCode) {
+            REQ_EXPORT -> runCatching {
+                contentResolver.openOutputStream(data.data!!)?.use { os ->
+                    os.write(gson.toJson(ReminderStore.loadReminders(this)).toByteArray())
+                }
+                android.widget.Toast.makeText(this, "已导出", android.widget.Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                android.widget.Toast.makeText(this, "导出失败：${it.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+            REQ_IMPORT_FILE -> runCatching {
+                val json = contentResolver.openInputStream(data.data!!)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                if (json != null) showImportPreview(json)
+            }.onFailure {
+                android.widget.Toast.makeText(this, "读取失败：${it.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     /** 统计逻辑由原 StatsActivity 迁入 */
