@@ -20,8 +20,8 @@ android {
         applicationId = "com.intersetwq.dailyrhythm"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
         // 只适配最主流的 arm64-v8a
         ndk { abiFilters += listOf("arm64-v8a") }
     }
