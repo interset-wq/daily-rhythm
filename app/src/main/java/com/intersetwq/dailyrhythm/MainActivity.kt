@@ -115,18 +115,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 时间线：未来 7 天的触发计划 */
+    /** 时间线：今天 00:00 起未来 7 天的触发计划；已到点条目标注打卡状态，当日结束（0:00）才批量出队 */
     private fun refreshTimeline() {
         val now = java.time.LocalDateTime.now()
+        val startOfToday = java.time.LocalDate.now().atStartOfDay()
         val items = OccurrenceCalculator.upcoming(
-            ReminderStore.loadReminders(this), now, now.plusDays(7)
+            ReminderStore.loadReminders(this), startOfToday, now.plusDays(7)
         )
+        // 打卡记录按 (reminderId, 触发小时) 归并：用于时间线区分已完成/已跳过
+        val logs = ReminderStore.loadLogs(this)
         val rv = findViewById<RecyclerView>(R.id.rvTimeline)
         if (rv.adapter == null) {
             rv.layoutManager = LinearLayoutManager(this)
             rv.adapter = TimelineAdapter()
         }
-        (rv.adapter as TimelineAdapter).submit(items)
+        (rv.adapter as TimelineAdapter).submit(items, logs)
         findViewById<View>(R.id.tvTimelineEmpty).visibility =
             if (items.isEmpty()) View.VISIBLE else View.GONE
     }

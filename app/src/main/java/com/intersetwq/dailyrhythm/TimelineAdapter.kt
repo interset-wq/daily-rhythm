@@ -18,15 +18,24 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private sealed interface Row
     private data class DayRow(val date: LocalDate, val label: String, val dateText: String) : Row
-    private data class EventRow(val time: LocalDateTime, val reminder: Reminder) : Row
+    /** state: 0=已完成 1=已跳过 2=已过期未打卡 3=未到点 */
+    private data class EventRow(val time: LocalDateTime, val reminder: Reminder, val state: Int) : Row
 
     private val rows = mutableListOf<Row>()
 
     private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
     private val dateFmt = DateTimeFormatter.ofPattern("MM-dd EEE")
 
-    fun submit(list: List<Pair<LocalDateTime, Reminder>>) {
+    /**
+     * [logs] 用于判定"今天已到点"条目的打卡状态：已完成/已跳过渲染为灰色，
+     * 已过期未打卡同样置灰；条目保留到当日结束，0:00 随新一天视图批量出队。
+     * 打卡与触发点按 (reminderId, 触发时刻 ±1 小时) 匹配，容忍打卡延迟。
+     */
+    fun submit(list: List<Pair<LocalDateTime, Reminder>>, logs: List<DoseLog> = emptyList()) {
         rows.clear()
+        val now = LocalDateTime.now()
+        // reminderId -> 该提醒所有打卡的 epoch millis
+        val logTimes = logs.groupBy({ it.reminderId }, { it.time })
         var lastDay: LocalDate? = null
         for ((time, r) in list) {
             val day = time.toLocalDate()
@@ -40,7 +49,31 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 rows.add(DayRow(day, label, day.format(dateFmt)))
                 lastDay = day
             }
-            rows.add(EventRow(time, r))
+            val state = if (!time.isAfter(now)) {
+                // 已到点：±1 小时窗口内的打卡视为该次触发
+                val inWindow = logTimes[r.id].orEmpty().any {
+                    val l = java.time.Instant.ofEpochMilli(it)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                    !l.isBefore(time.minusHours(1)) && !l.isAfter(time.plusHours(1))
+                }
+                val takenLog = inWindow && logTimes[r.id]!!.any {
+                    val l = java.time.Instant.ofEpochMilli(it)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                    val log = logs.first { x ->
+                        x.reminderId == r.id && java.time.Instant.ofEpochMilli(x.time)
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() == l
+                    }
+                    log.taken
+                }
+                when {
+                    inWindow && takenLog -> 0
+                    inWindow -> 1
+                    else -> 2
+                }
+            } else {
+                3
+            }
+            rows.add(EventRow(time, r, state))
         }
         notifyDataSetChanged()
     }
@@ -81,8 +114,23 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
             is EventRow -> {
                 val h = holder as EventVH
+                val gray = row.state != 3
                 h.tvTime.text = row.time.format(timeFmt)
-                h.tvCountdown.text = countdown(row.time)
+                // 倒计时位改为状态文案；未到点才显示剩余时间
+                h.tvCountdown.text = when (row.state) {
+                    0 -> "已完成"
+                    1 -> "已跳过"
+                    2 -> "已过期"
+                    else -> countdown(row.time)
+                }
+                // 已到点条目整体置灰（0:00 随当日结束批量出队）
+                val grayColor = 0xFF9AA3AD.toInt()
+                val normalColor = 0xFF1565C0.toInt()
+                h.tvTime.setTextColor(if (gray) grayColor else normalColor)
+                h.tvCountdown.setTextColor(grayColor)
+                h.tvTitle.setTextColor(if (gray) grayColor else 0xFF1C1F26.toInt())
+                h.tvNote.setTextColor(grayColor)
+                h.tvBadge.alpha = if (gray) 0.4f else 1f
                 h.tvBadge.visibility = if (row.reminder.strength == AlarmStrength.FULL_ALARM) View.VISIBLE else View.GONE
                 h.tvTitle.text = row.reminder.title
                 if (row.reminder.note.isNotBlank()) {
