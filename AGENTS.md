@@ -12,10 +12,16 @@
 
 ## 架构（单模块，全部在 `app/src/main/java/com/intersetwq/dailyrhythm/`）
 
-- **数据层**：`ReminderStore`（Gson JSON 存 `files/reminders.json`、`dose_logs.json`，无 Room/SQLite）、`SettingsStore`（SharedPreferences）、`Reminder.kt`（模型，时间统一用"当天 00:00 起的分钟数"思想存 `HH:mm` 字符串）。
+- **数据层**：`ReminderStore`（Gson JSON 存 `files/reminders.json`、`dose_logs.json`，无 Room/SQLite）、`SettingsStore`（SharedPreferences，键：默认强提醒/通知声音/稍后时长/时间线批量出队/排序方向/外观模式）、`Reminder.kt`（模型，时间统一用"当天 00:00 起的分钟数"思想存 `HH:mm` 字符串）。
 - **调度核心**：`OccurrenceCalculator`（四种重复模式的"下一次触发"纯计算，无 Android 依赖，改调度逻辑先改这里）、`AlarmScheduler`（AlarmManager 精确闹钟，触发后滚动排下一次）、`AlarmReceiver`/`BootReceiver`。
 - **提醒呈现**：`strength` 字段决定走普通通知（`AlarmNotifier`）还是全屏闹钟（`AlarmActivity`）。
-- **UI**：MainActivity 单 Activity 四个内页 Tab（提醒列表/统计/时间线/设置），统计与时间线是主界面内嵌 View，不是独立 Activity；`EditReminderActivity`、`AlarmActivity` 独立。
+- **UI**：MainActivity 单 Activity 四个内页 Tab（提醒列表/统计/时间线/设置），统计与时间线是主界面内嵌 View，不是独立 Activity；`EditReminderActivity`、`AlarmActivity` 独立。导入导出、外观切换（`AppCompatDelegate.setDefaultNightMode`）均在 MainActivity。
+
+## 视觉规范
+
+- 配色对齐 GitHub Mobile（Primer）：浅色 `#F6F8FA` 画布 + 白卡片 + `#0969DA` 强调；深色（`values-night`）`#0D1117` 画布 + `#161B22` 卡片 + `#58A6FF` 强调。
+- **颜色必须走 `@color/` 语义引用**（`bg_page`/`card_bg`/`text_primary`/`text_secondary`/`accent_blue`/`on_brand`/`danger` 等），禁止在布局/代码里硬编码色值，否则深色模式会漏适配。闹钟全屏页（`activity_alarm.xml`）例外，刻意保持常黑。
+- header（主页 `headerBar`、编辑页 `topBar`）为品牌蓝底，内容区 `wrap_content + minHeight 72dp` + 12dp 底部 padding，由 `SystemBarsHelper.applyWithHeader` 垫进状态栏——**insets 必须接在最外层 header 容器上**，接内层标题会导致旁边的按钮被状态栏遮挡。
 
 ## 项目特有注意事项
 
