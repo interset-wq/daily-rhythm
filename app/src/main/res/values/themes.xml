@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MedReminder" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.DailyRhythm" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/brand_primary</item>
         <item name="colorOnPrimary">@color/on_brand</item>
         <item name="colorPrimaryContainer">@color/brand_primary_light</item>
@@ -12,7 +12,7 @@
         <item name="android:windowBackground">@color/bg_page</item>
     </style>
 
-    <style name="Theme.MedReminder.Alarm" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.DailyRhythm.Alarm" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/black</item>
     </style>
