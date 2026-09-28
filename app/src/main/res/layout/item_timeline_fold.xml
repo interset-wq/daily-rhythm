@@ -40,13 +40,12 @@
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 
-        <TextView
-            android:id="@+id/tvFoldArrow"
+        <ImageView
+            android:id="@+id/ivFoldArrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="▾"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            android:contentDescription="@null"
+            android:src="@drawable/ic_fold_down" />
     </LinearLayout>
 </LinearLayout>
