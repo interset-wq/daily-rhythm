@@ -111,7 +111,9 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             seg.count { it.state == 2 }
         )
         if (!pastExpanded) {
-            rows.subList(firstGray, futureIdx).clear()
+            // 只移除段内的灰色事件行，保留其中的日期头（如“明天”），
+            // 否则折叠后下一天的条目会紧跟折叠头，看起来像今天
+            rows.subList(firstGray, futureIdx).removeAll { it is EventRow }
             rows.add(firstGray, fold)
         } else {
             rows.add(firstGray, fold)
