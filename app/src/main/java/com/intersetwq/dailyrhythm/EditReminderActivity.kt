@@ -45,6 +45,7 @@ class EditReminderActivity : AppCompatActivity() {
     private lateinit var llWeek: LinearLayout
     private lateinit var weekChecks: List<CheckBox>
     private lateinit var rowStart: View
+    private lateinit var tvStartLabel: TextView
     private lateinit var tvStartDate: TextView
     private lateinit var rowStart2: View
     private lateinit var tvStartTime: TextView
@@ -97,6 +98,7 @@ class EditReminderActivity : AppCompatActivity() {
             findViewById(R.id.cbThu), findViewById(R.id.cbFri), findViewById(R.id.cbSat), findViewById(R.id.cbSun)
         )
         rowStart = findViewById(R.id.rowStartDate)
+        tvStartLabel = findViewById(R.id.tvStartLabel)
         tvStartDate = findViewById(R.id.tvStartDate)
         rowStart2 = findViewById(R.id.rowStartTime)
         tvStartTime = findViewById(R.id.tvStartTime)
@@ -182,8 +184,11 @@ class EditReminderActivity : AppCompatActivity() {
         llWeek.visibility = if (weekly) View.VISIBLE else View.GONE
         rowInterval.visibility = if (interval) View.VISIBLE else View.GONE
         rowOnce.visibility = if (once) View.VISIBLE else View.GONE
-        rowStart.visibility = if (once || interval) View.GONE else View.VISIBLE
-        rowStart2.visibility = if (once || interval) View.VISIBLE else View.GONE
+        // 开始日期四种模式都可选（INTERVAL 是间隔锚点，ONCE 是触发日）
+        rowStart.visibility = View.VISIBLE
+        tvStartLabel.text = if (once) "提醒日期：" else "开始日期："
+        // 单时间行仅 INTERVAL 用（ONCE 生效的是 rowOnce 里的提醒时间）
+        rowStart2.visibility = if (interval) View.VISIBLE else View.GONE
         refreshTimesText()
     }
 
