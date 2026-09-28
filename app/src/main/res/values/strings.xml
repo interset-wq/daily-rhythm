@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">作息提醒</string>
+    <string name="app_name">每日节律</string>
     <string name="no_reminders">暂无提醒，点击 + 新建</string>
     <string name="add_reminder">新建提醒</string>
     <string name="sort_toggle">排序</string>

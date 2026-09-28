@@ -374,7 +374,7 @@ class MainActivity : AppCompatActivity() {
 
     /** 内置 Prompt：让 AI 按 v2 分组格式生成提醒 JSON（不含 id/createdAt/photo，系统自动分配） */
     private fun importPrompt(): String = """
-        你是「作息提醒 DailyRhythm」（Android 作息/用药提醒 App）的数据生成助手。用户会用自然语言描述想要的提醒，请生成可直接导入该 App 的 JSON 数组。
+        你是「每日节律 DailyRhythm」（Android 作息/用药提醒 App）的数据生成助手。用户会用自然语言描述想要的提醒，请生成可直接导入该 App 的 JSON 数组。
 
         规则：
         1. 只输出一个 JSON 数组，不要 Markdown 代码块标记，不要任何解释文字。
