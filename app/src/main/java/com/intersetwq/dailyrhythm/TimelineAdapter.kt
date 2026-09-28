@@ -3,6 +3,7 @@ package com.intersetwq.dailyrhythm
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.time.Duration
@@ -97,9 +98,10 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         rows.removeAll { it is FoldRow }
         val firstGray = rows.indexOfFirst { it is EventRow && it.state != 3 }
         if (firstGray < 0) return
-        val futureIdx = rows.subList(firstGray, rows.size)
+        // indexOfFirst 在 subList 上返回相对索引，需加回 firstGray 得到绝对位置
+        val futureIdx = firstGray + rows.subList(firstGray, rows.size)
             .indexOfFirst { it is EventRow && it.state == 3 }
-            .let { if (it < 0) rows.size else firstGray + it }
+            .let { if (it < 0) rows.size - firstGray else it }
         val seg = rows.subList(firstGray, futureIdx).filterIsInstance<EventRow>()
         if (seg.isEmpty()) return
         val fold = FoldRow(
@@ -131,7 +133,7 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     class FoldVH(v: View) : RecyclerView.ViewHolder(v) {
         val tvFoldText: TextView = v.findViewById(R.id.tvFoldText)
-        val tvFoldArrow: TextView = v.findViewById(R.id.tvFoldArrow)
+        val ivFoldArrow: ImageView = v.findViewById(R.id.ivFoldArrow)
     }
 
     override fun getItemViewType(position: Int): Int = when (rows[position]) {
@@ -166,7 +168,9 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 if (row.expired > 0) parts.add("过期 ${row.expired}")
                 val detail = if (parts.isEmpty()) "" else "（${parts.joinToString(" · ")}）"
                 h.tvFoldText.text = "已过 ${row.total} 项$detail"
-                h.tvFoldArrow.text = if (pastExpanded) "▴" else "▾"
+                h.ivFoldArrow.setImageResource(
+                    if (pastExpanded) R.drawable.ic_fold_up else R.drawable.ic_fold_down
+                )
                 h.itemView.setOnClickListener {
                     pastExpanded = !pastExpanded
                     submit(cachedList, cachedLogs)
