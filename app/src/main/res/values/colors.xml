@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 视觉规范：主色 Modern Blue，中性底 + 白色扁平卡片（深色值见 values-night/colors.xml） -->
-    <color name="brand_primary">#1976D2</color>
-    <color name="brand_primary_dark">#1565C0</color>
-    <color name="brand_primary_light">#E3F2FD</color>
-    <color name="bg_page">#F6F8FB</color>
-    <color name="text_primary">#1C1F26</color>
-    <color name="text_secondary">#8A9099</color>
-    <color name="card_stroke">#ECEFF3</color>
-    <color name="danger">#E53935</color>
-    <color name="ic_launcher_background">#1976D2</color>
+    <!-- 视觉规范：GitHub Mobile (Primer) 浅色风格——白底 + 浅灰画布 + 白色卡片 + 蓝色强调 -->
+    <color name="brand_primary">#0969DA</color>
+    <color name="brand_primary_dark">#0550AE</color>
+    <color name="brand_primary_light">#DDF4FF</color>
+    <color name="bg_page">#F6F8FA</color>
+    <color name="text_primary">#1F2328</color>
+    <color name="text_secondary">#59636E</color>
+    <color name="card_stroke">#D1D9E0</color>
+    <color name="danger">#D1242F</color>
+    <color name="ic_launcher_background">#0969DA</color>
 
     <!-- 语义化扩展色：布局/代码统一引用，深色模式由 values-night 覆盖 -->
     <color name="on_brand">#FFFFFF</color>
     <color name="card_bg">#FFFFFF</color>
-    <color name="accent_blue">#1565C0</color>
-    <color name="accent_blue_light">#90CAF9</color>
-    <color name="success">#43A047</color>
-    <color name="warning">#FFD54F</color>
-    <color name="timeline_line">#90CAF9</color>
+    <color name="accent_blue">#0969DA</color>
+    <color name="accent_blue_light">#54AEFF</color>
+    <color name="success">#1A7F37</color>
+    <color name="warning">#9A6700</color>
+    <color name="timeline_line">#54AEFF</color>
 </resources>

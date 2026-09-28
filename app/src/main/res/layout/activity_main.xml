@@ -13,11 +13,13 @@
         <LinearLayout
             android:id="@+id/headerBar"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
+            android:minHeight="72dp"
             android:background="@color/brand_primary"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="12dp">
 
             <TextView
                 android:id="@+id/tvTitleBar"

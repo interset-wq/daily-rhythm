@@ -31,5 +31,5 @@
         android:layout_height="1dp"
         android:layout_marginStart="12dp"
         android:layout_weight="1"
-        android:background="#E3F2FD" />
+        android:background="@color/brand_primary_light" />
 </LinearLayout>

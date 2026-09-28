@@ -13,11 +13,13 @@
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
+            android:minHeight="72dp"
             android:background="@color/brand_primary"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="12dp">
 
             <ImageButton
                 android:id="@+id/btnBack"
@@ -352,7 +354,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
-                    android:textColor="#43A047" />
+                    android:textColor="@color/success" />
             </LinearLayout>
 
             <LinearLayout
@@ -366,7 +368,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:backgroundTint="#E53935"
+                    android:backgroundTint="@color/danger"
                     android:text="@string/delete"
                     android:textColor="@color/on_brand" />
 

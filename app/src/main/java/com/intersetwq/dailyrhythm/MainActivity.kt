@@ -128,7 +128,9 @@ class MainActivity : AppCompatActivity() {
         pageTimeline.visibility = if (page == "timeline") View.VISIBLE else View.GONE
         pageSettings.visibility = if (page == "settings") View.VISIBLE else View.GONE
         fab.visibility = if (reminders) View.VISIBLE else View.GONE
-        findViewById<ImageView>(R.id.btnSort).visibility = if (reminders) View.VISIBLE else View.GONE
+        // INVISIBLE 而非 GONE：占位保持 40dp 行高，四个 Tab 的 header 高度完全一致
+        findViewById<ImageView>(R.id.btnSort).visibility =
+            if (reminders) View.VISIBLE else View.INVISIBLE
         tvTitleBar.text = when (page) {
             "stats" -> getString(R.string.stats)
             "timeline" -> "时间线"
