@@ -38,7 +38,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val REQ_EXPORT = 1001
         private const val REQ_IMPORT_FILE = 1002
+        private const val STATE_PAGE = "state_page"
     }
+
+    /** 当前所在 Tab；切主题触发 Activity 重建时靠它恢复页面 */
+    private var currentPage = "reminders"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,19 +85,21 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, EditReminderActivity::class.java))
         }
 
-        // 桌面长按快捷菜单：新建提醒 / 查看时间线
-        when (intent?.action) {
-            "com.intersetwq.dailyrhythm.NEW_REMINDER" ->
-                startActivity(Intent(this, EditReminderActivity::class.java))
-            "com.intersetwq.dailyrhythm.OPEN_TIMELINE" -> showPage("timeline")
-            // 常规启动：初始化首页状态（含排序按钮可见性），默认提醒页
-            else -> showPage("reminders")
+        // 页面恢复优先（切主题会重建 Activity），否则回退到快捷方式/默认提醒页
+        val startPage = savedInstanceState?.getString(STATE_PAGE) ?: when (intent?.action) {
+            "com.intersetwq.dailyrhythm.OPEN_TIMELINE" -> "timeline"
+            else -> "reminders"
+        }
+        // 桌面长按快捷菜单：新建提醒
+        if (intent?.action == "com.intersetwq.dailyrhythm.NEW_REMINDER") {
+            startActivity(Intent(this, EditReminderActivity::class.java))
         }
 
         setupSettingsPage()
 
         // 底部 Tab：屏幕按钮切换页面，不依赖手势
-        findViewById<BottomNavigationView>(R.id.bottomNav).setOnItemSelectedListener { item ->
+        val nav = findViewById<BottomNavigationView>(R.id.bottomNav)
+        nav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_reminders -> {
                     showPage("reminders")
@@ -116,11 +122,25 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+        // 先显式 showPage 再同步选中项：selectedItemId 与当前一致时不会触发监听
+        showPage(startPage)
+        nav.selectedItemId = when (startPage) {
+            "stats" -> R.id.nav_stats
+            "timeline" -> R.id.nav_timeline
+            "settings" -> R.id.nav_settings
+            else -> R.id.nav_reminders
+        }
 
         requestNeededPermissions()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_PAGE, currentPage)
+    }
+
     private fun showPage(page: String) {
+        currentPage = page
         val reminders = page == "reminders"
         val stats = page == "stats"
         pageReminders.visibility = if (reminders) View.VISIBLE else View.GONE
@@ -293,24 +313,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        val now = java.time.LocalDateTime.now()
         val asc = SettingsStore.reminderSortAsc(this)
-        // 按下次触发时间排序；无下次触发（禁用/过期）的排最后，组内按 id
-        fun nextOf(r: Reminder): java.time.LocalDateTime? = OccurrenceCalculator.nextAfter(r, now)
-        val list = ReminderStore.loadReminders(this).sortedWith(
-            compareBy(
-                { r: Reminder -> nextOf(r) == null },
-                { r: Reminder ->
-                    val n = nextOf(r)
-                    when {
-                        n == null -> 0L
-                        asc -> java.time.Duration.between(now, n).toMillis()
-                        else -> -java.time.Duration.between(now, n).toMillis()
-                    }
-                },
-                { it.id }
-            )
-        )
+        // 按当天触发时间排序；一天有多个触发时间时取最早的一个
+        fun firstTime(r: Reminder): java.time.LocalTime = when (r.repeatType) {
+            RepeatType.ONCE, RepeatType.INTERVAL -> OccurrenceCalculator.parseTime(r.startTime)
+            else -> r.timesOfDay.minOfOrNull { OccurrenceCalculator.parseTime(it) }
+                ?: OccurrenceCalculator.parseTime(r.startTime)
+        }
+        val cmp = compareBy<Reminder>({ firstTime(it) }, { it.id })
+        val list = ReminderStore.loadReminders(this).sortedWith(if (asc) cmp else cmp.reversed())
         adapter.submit(list)
         tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
     }

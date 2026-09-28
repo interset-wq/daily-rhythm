@@ -17,7 +17,7 @@ object SettingsStore {
     const val KEY_SOUND_ENABLED = "sound_enabled"
     /** 时间线出队方式：true=当日结束批量出队（默认），false=提醒后立即出队 */
     const val KEY_TIMELINE_BATCH_DEQUEUE = "timeline_batch_dequeue"
-    /** 提醒列表排序：true=按下次触发时间升序（默认），false=降序 */
+    /** 提醒列表排序：true=按触发时间升序（默认），false=降序；多个触发时间取最早的一个 */
     const val KEY_REMINDER_SORT_ASC = "reminder_sort_asc"
     /** 外观模式：0=跟随系统（默认）1=浅色 2=深色 */
     const val KEY_THEME_MODE = "theme_mode"
