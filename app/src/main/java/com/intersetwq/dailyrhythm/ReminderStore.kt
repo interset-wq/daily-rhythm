@@ -33,7 +33,7 @@ object ReminderStore {
         val f = remindersFile(ctx)
         if (!f.exists()) return mutableListOf()
         return runCatching {
-            // 宽松解析：v2 分组格式，含 v1 平铺旧数据迁移读入；坏条目跳过
+            // 宽松解析：v2 分组格式；坏条目跳过
             ReminderJson.fromJson(f.readText()).reminders
         }.getOrDefault(mutableListOf())
     }

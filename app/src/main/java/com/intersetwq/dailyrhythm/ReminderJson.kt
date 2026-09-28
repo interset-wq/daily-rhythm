@@ -18,7 +18,6 @@ import java.time.LocalDate
  * - 模式对象 repeat：daily{times} / weekly{days,times} / interval{every,time} / once{time}
  * - id/createdAt/photo 缺省自动补齐（AI 生成的 JSON 不需要写这些）
  * - 未知字段忽略，坏条目跳过不炸整批（手编/AI 容错）
- * - 兼容读入 v1 平铺格式（repeatType/timesOfDay 平铺），仅供内部旧数据迁移，新输出一律 v2
  */
 object ReminderJson {
 
@@ -84,7 +83,7 @@ object ReminderJson {
         JsonArray().also { a -> v.forEach { a.add(it) } }
 
     /**
-     * 宽松解析：接受 v2 数组 / v2 单对象 / v1 平铺数组。
+     * 宽松解析：接受 v2 数组 / v2 单对象。
      * 坏条目跳过并记入 [ParseResult.errors]，有效条目照常返回。
      */
     fun fromJson(json: String): ParseResult {
@@ -122,12 +121,9 @@ object ReminderJson {
         val title = o.str("title")?.trim().orEmpty()
         if (title.isEmpty()) throw IllegalArgumentException("缺少 title")
 
-        // v1 平铺格式识别（repeatType 存在）：旧内部数据迁移用
-        val rep: JsonObject = if (o.has("repeatType")) migrateV1(o) else {
-            val repEl = o.get("repeat")
-            if (repEl == null || !repEl.isJsonObject) throw IllegalArgumentException("缺少 repeat 对象")
-            repEl.asJsonObject
-        }
+        val repEl = o.get("repeat")
+        if (repEl == null || !repEl.isJsonObject) throw IllegalArgumentException("缺少 repeat 对象")
+        val rep: JsonObject = repEl.asJsonObject
 
         val type = rep.str("type")?.lowercase() ?: throw IllegalArgumentException("缺少 repeat.type")
         val date = o.str("date") ?: LocalDate.now().toString()
@@ -175,33 +171,6 @@ object ReminderJson {
             enabled = o.get("enabled")?.let { !it.isJsonPrimitive || !it.asJsonPrimitive.isBoolean || it.asBoolean } ?: true,
             createdAt = o.long("createdAt")?.takeIf { it > 0 } ?: id
         )
-    }
-
-    /** v1 平铺 → repeat 对象（仅迁移读入，字段一一对应） */
-    private fun migrateV1(o: JsonObject): JsonObject {
-        val rep = JsonObject()
-        when (o.str("repeatType")?.lowercase()) {
-            "daily" -> {
-                rep.addProperty("type", "daily")
-                rep.add("times", o.get("timesOfDay")?.deepCopy() ?: JsonArray().apply { add("08:00") })
-            }
-            "weekly" -> {
-                rep.addProperty("type", "weekly")
-                rep.add("days", o.get("weekDays")?.deepCopy() ?: JsonArray().apply { add(1) })
-                rep.add("times", o.get("timesOfDay")?.deepCopy() ?: JsonArray().apply { add("08:00") })
-            }
-            "interval" -> {
-                rep.addProperty("type", "interval")
-                rep.addProperty("every", o.int("intervalDays") ?: 2)
-                rep.addProperty("time", o.str("startTime") ?: "08:00")
-            }
-            "once" -> {
-                rep.addProperty("type", "once")
-                rep.addProperty("time", o.str("startTime") ?: "08:00")
-            }
-            else -> throw IllegalArgumentException("repeatType 非法")
-        }
-        return rep
     }
 
     private data class Five(

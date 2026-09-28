@@ -238,7 +238,7 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- AI 生成：复制内置 Prompt，让 AI 生成/转换可导入的提醒 JSON -->
+        <!-- AI 生成：复制内置 Prompt，让 AI 生成可导入的提醒 JSON -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -264,7 +264,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="复制 Prompt 让 AI 生成 / 转换导入用 JSON"
+                    android:text="复制 Prompt 让 AI 生成导入用 JSON"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -277,18 +277,6 @@
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
                 android:text="生成 Prompt"
-                android:textColor="@color/brand_primary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/btnCopyMigratePrompt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:background="@drawable/bg_time_chip"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:text="旧格式转新"
                 android:textColor="@color/brand_primary"
                 android:textSize="13sp" />
         </LinearLayout>

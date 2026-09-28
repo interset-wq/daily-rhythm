@@ -259,13 +259,6 @@ class MainActivity : AppCompatActivity() {
             cm.setPrimaryClip(android.content.ClipData.newPlainText("dailyrhythm_prompt", importPrompt()))
             android.widget.Toast.makeText(this, "Prompt 已复制，粘贴给 AI 即可", android.widget.Toast.LENGTH_SHORT).show()
         }
-        // TODO: 过渡功能，未来版本移除此入口
-        // 旧格式转换：复制转换 Prompt，让 AI 把 v1 平铺 JSON 转为 v2 分组格式
-        findViewById<TextView>(R.id.btnCopyMigratePrompt).setOnClickListener {
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("dailyrhythm_migrate_prompt", migratePrompt()))
-            android.widget.Toast.makeText(this, "转换 Prompt 已复制，粘贴旧 JSON 给 AI 即可", android.widget.Toast.LENGTH_SHORT).show()
-        }
 
         // 外观三选一：跟随系统/浅色/深色，选择即写偏好并即时切换（无需重启）
         val actTheme = findViewById<TextView>(R.id.actTheme)
@@ -407,33 +400,6 @@ class MainActivity : AppCompatActivity() {
         示例（每天两次吃药强提醒 / 每周三复盘 / 隔天维生素 / 一次性体检）：
         [{"title":"吃药","date":"{TODAY}","note":"饭后","repeat":{"type":"daily","times":["08:00","20:00"]},"strength":"alarm"},{"title":"周复盘","repeat":{"type":"weekly","days":[3],"times":["21:00"]}},{"title":"维生素","date":"{TODAY}","repeat":{"type":"interval","every":2,"time":"09:00"}},{"title":"体检","date":"{TODAY}","repeat":{"type":"once","time":"08:30"},"strength":"alarm"}]
     """.trimIndent().replace("{TODAY}", java.time.LocalDate.now().toString())
-
-    // TODO: 过渡功能，未来版本移除此 prompt 与「旧格式转换」按钮
-    /** 内置 Prompt：把旧版平铺格式 JSON 转换为 v2 分组格式（保留 id/createdAt 等原值） */
-    private fun migratePrompt(): String = """
-        你是「作息提醒 DailyRhythm」的 JSON 格式转换器。用户会粘贴旧版（平铺字段）格式的提醒 JSON 数组，请转换为新版分组格式。
-
-        规则：
-        1. 只输出转换后的 JSON 数组，不要解释文字，不要 Markdown 代码块标记。
-        2. 数据只转换、不修改：标题、备注、日期、时间一律照抄。
-        3. 字段映射：
-        - startDate → date；photoName → photo（空串则省略 photo）
-        - repeatType → repeat.type（daily/weekly/interval/once 不变）
-        - daily：timesOfDay → repeat.times
-        - weekly：weekDays → repeat.days，timesOfDay → repeat.times
-        - interval：intervalDays → repeat.every，startTime → repeat.time
-        - once：startTime → repeat.time
-        - title、note、strength、enabled 同名保留
-        - id、createdAt 原样保留（同设备恢复数据的关键，不要改写）
-        4. 删除已无意义的旧字段：repeatType、startDate、startTime、timesOfDay、weekDays、intervalDays、photoName。
-        5. 若输入已含 repeat 对象（新格式），原样输出。
-        6. 每条提醒只保留它所属模式需要的 repeat 字段，其余模式字段一律删除。
-
-        旧格式示例：
-        [{"id":1,"title":"吃药","note":"饭后","repeatType":"daily","startDate":"2026-09-28","startTime":"08:00","timesOfDay":["08:00","20:00"],"weekDays":[1],"intervalDays":2,"strength":"alarm","photoName":"","enabled":true,"createdAt":100}]
-        对应新格式输出：
-        [{"id":1,"title":"吃药","note":"饭后","date":"2026-09-28","repeat":{"type":"daily","times":["08:00","20:00"]},"strength":"alarm","createdAt":100}]
-    """.trimIndent()
 
     private var pendingImport: List<Reminder>? = null
 
