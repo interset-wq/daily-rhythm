@@ -31,6 +31,19 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/btnToggleAll"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:text="全部停用"
+                android:textColor="@color/on_brand"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
             <ImageView
                 android:id="@+id/btnSort"
                 android:layout_width="40dp"
@@ -81,64 +94,12 @@
                 app:tint="@color/on_brand" />
         </FrameLayout>
 
-        <!-- Tab 2：统计 -->
-        <ScrollView
-            android:id="@+id/pageStats"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/tvRate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="24dp"
-                    android:text="0%"
-                    android:textColor="@color/brand_primary"
-                    android:textSize="56sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvDetail"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="8dp"
-                    android:text="近 7 天统计"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="32dp"
-                    android:text="最近记录"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvRecent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:lineSpacingExtra="6dp"
-                    android:text="暂无记录"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </ScrollView>
-
-        <!-- Tab 3：时间线 -->
+        <!-- Tab 2：时间线 -->
         <include
             android:id="@+id/pageTimeline"
             layout="@layout/page_timeline" />
 
-        <!-- Tab 4：设置 -->
+        <!-- Tab 3：设置 -->
         <include
             android:id="@+id/pageSettings"
             layout="@layout/page_settings" />

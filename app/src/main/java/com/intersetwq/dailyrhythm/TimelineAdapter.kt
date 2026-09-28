@@ -20,11 +20,18 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private data class DayRow(val date: LocalDate, val label: String, val dateText: String) : Row
     /** state: 0=已完成 1=已跳过 2=已过期未打卡 3=未到点 */
     private data class EventRow(val time: LocalDateTime, val reminder: Reminder, val state: Int) : Row
+    /** 折叠头：批量出队模式下收起列表开头连续的灰色（已到点）条目 */
+    private data class FoldRow(val total: Int, val taken: Int, val skipped: Int, val expired: Int) : Row
 
     private val rows = mutableListOf<Row>()
 
     private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
     private val dateFmt = DateTimeFormatter.ofPattern("MM-dd EEE")
+
+    private var cachedList: List<Pair<LocalDateTime, Reminder>> = emptyList()
+    private var cachedLogs: List<DoseLog> = emptyList()
+    /** 折叠状态跨刷新保持（adapter 实例字段，submit 不重置） */
+    var pastExpanded = false
 
     /**
      * [logs] 用于判定"今天已到点"条目的打卡状态：已完成/已跳过渲染为灰色，
@@ -32,6 +39,8 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
      * 打卡与触发点按 (reminderId, 触发时刻 ±1 小时) 匹配，容忍打卡延迟。
      */
     fun submit(list: List<Pair<LocalDateTime, Reminder>>, logs: List<DoseLog> = emptyList()) {
+        cachedList = list
+        cachedLogs = logs
         rows.clear()
         val now = LocalDateTime.now()
         // reminderId -> 该提醒所有打卡的 epoch millis
@@ -75,7 +84,36 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
             rows.add(EventRow(time, r, state))
         }
+        applyFold()
         notifyDataSetChanged()
+    }
+
+    /**
+     * 批量出队折叠：列表开头连续的灰色（已到点）条目收进一个折叠头。
+     * 收起时删除该段并插入 FoldRow；展开时仅在段前插入 FoldRow（箭头朝上）。
+     * 立即出队模式没有灰色条目，firstGray = -1，不产生折叠头。
+     */
+    private fun applyFold() {
+        rows.removeAll { it is FoldRow }
+        val firstGray = rows.indexOfFirst { it is EventRow && it.state != 3 }
+        if (firstGray < 0) return
+        val futureIdx = rows.subList(firstGray, rows.size)
+            .indexOfFirst { it is EventRow && it.state == 3 }
+            .let { if (it < 0) rows.size else firstGray + it }
+        val seg = rows.subList(firstGray, futureIdx).filterIsInstance<EventRow>()
+        if (seg.isEmpty()) return
+        val fold = FoldRow(
+            seg.size,
+            seg.count { it.state == 0 },
+            seg.count { it.state == 1 },
+            seg.count { it.state == 2 }
+        )
+        if (!pastExpanded) {
+            rows.subList(firstGray, futureIdx).clear()
+            rows.add(firstGray, fold)
+        } else {
+            rows.add(firstGray, fold)
+        }
     }
 
     class DayVH(v: View) : RecyclerView.ViewHolder(v) {
@@ -91,15 +129,23 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         val tvNote: TextView = v.findViewById(R.id.tvNote)
     }
 
-    override fun getItemViewType(position: Int): Int =
-        if (rows[position] is DayRow) 0 else 1
+    class FoldVH(v: View) : RecyclerView.ViewHolder(v) {
+        val tvFoldText: TextView = v.findViewById(R.id.tvFoldText)
+        val tvFoldArrow: TextView = v.findViewById(R.id.tvFoldArrow)
+    }
+
+    override fun getItemViewType(position: Int): Int = when (rows[position]) {
+        is DayRow -> 0
+        is EventRow -> 1
+        else -> 2
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == 0) {
-            DayVH(inflater.inflate(R.layout.item_timeline_day, parent, false))
-        } else {
-            EventVH(inflater.inflate(R.layout.item_timeline, parent, false))
+        return when (viewType) {
+            0 -> DayVH(inflater.inflate(R.layout.item_timeline_day, parent, false))
+            1 -> EventVH(inflater.inflate(R.layout.item_timeline, parent, false))
+            else -> FoldVH(inflater.inflate(R.layout.item_timeline_fold, parent, false))
         }
     }
 
@@ -111,6 +157,20 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 val h = holder as DayVH
                 h.tvLabel.text = row.label
                 h.tvDate.text = row.dateText
+            }
+            is FoldRow -> {
+                val h = holder as FoldVH
+                val parts = mutableListOf<String>()
+                if (row.taken > 0) parts.add("完成 ${row.taken}")
+                if (row.skipped > 0) parts.add("跳过 ${row.skipped}")
+                if (row.expired > 0) parts.add("过期 ${row.expired}")
+                val detail = if (parts.isEmpty()) "" else "（${parts.joinToString(" · ")}）"
+                h.tvFoldText.text = "已过 ${row.total} 项$detail"
+                h.tvFoldArrow.text = if (pastExpanded) "▴" else "▾"
+                h.itemView.setOnClickListener {
+                    pastExpanded = !pastExpanded
+                    submit(cachedList, cachedLogs)
+                }
             }
             is EventRow -> {
                 val h = holder as EventVH

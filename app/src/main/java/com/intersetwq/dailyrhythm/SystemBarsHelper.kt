@@ -20,8 +20,12 @@ import androidx.core.view.WindowInsetsCompat
  */
 object SystemBarsHelper {
 
-    /** 主界面：header 已是品牌蓝，让 header 延伸进状态栏即可（无闪烁、无色差）。 */
-    fun applyWithHeader(activity: Activity, header: View) {
+    /**
+     * 主界面：header 已是品牌蓝，让 header 延伸进状态栏即可（无闪烁、无色差）。
+     * @param extraTop 状态栏之外的额外顶部 padding，用于把 header 内容下移，
+     *                 平衡内容上下留白（上=状态栏贴顶，下=paddingBottom 的空隙）
+     */
+    fun applyWithHeader(activity: Activity, header: View, extraTop: Int = 0) {
         val window = activity.window
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowCompat.getInsetsController(window, window.decorView)
@@ -30,7 +34,7 @@ object SystemBarsHelper {
         // 把 insets 的 top 换成 header 的 padding，使 header 垫到状态栏后面
         ViewCompat.setOnApplyWindowInsetsListener(header) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
-            v.updatePadding(top = bars.top)
+            v.updatePadding(top = bars.top + extraTop)
             insets
         }
     }

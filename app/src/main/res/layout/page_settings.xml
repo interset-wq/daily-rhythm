@@ -132,6 +132,37 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
+        <!-- 时间线显示天数：1（仅当天）~ 7 个自然日，点击弹层选择 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="时间线显示天数"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/actTimelineDays"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_time_chip"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="7 天"
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         <!-- 外观：三选一（跟随系统/浅色/深色），即时生效 -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -203,6 +234,61 @@
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
                 android:text="导入"
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- AI 生成：复制内置 Prompt，让 AI 生成/转换可导入的提醒 JSON -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AI 生成提醒"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="复制 Prompt 让 AI 生成 / 转换导入用 JSON"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnCopyPrompt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_time_chip"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="生成 Prompt"
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/btnCopyMigratePrompt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_time_chip"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="旧格式转新"
                 android:textColor="@color/brand_primary"
                 android:textSize="13sp" />
         </LinearLayout>

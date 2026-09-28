@@ -33,14 +33,14 @@ object ReminderStore {
         val f = remindersFile(ctx)
         if (!f.exists()) return mutableListOf()
         return runCatching {
-            val type = object : TypeToken<MutableList<Reminder>>() {}.type
-            gson.fromJson<MutableList<Reminder>>(f.readText(), type) ?: mutableListOf()
+            // 宽松解析：v2 分组格式，含 v1 平铺旧数据迁移读入；坏条目跳过
+            ReminderJson.fromJson(f.readText()).reminders
         }.getOrDefault(mutableListOf())
     }
 
     @Synchronized
     fun saveReminders(ctx: Context, list: List<Reminder>) {
-        remindersFile(ctx).writeText(gson.toJson(list))
+        remindersFile(ctx).writeText(ReminderJson.toJson(list))
     }
 
     @Synchronized

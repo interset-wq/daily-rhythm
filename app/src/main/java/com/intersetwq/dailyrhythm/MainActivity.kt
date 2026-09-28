@@ -19,21 +19,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var adapter: ReminderAdapter
     private lateinit var tvEmpty: TextView
     private lateinit var pageReminders: View
-    private lateinit var pageStats: View
     private lateinit var pageSettings: View
     private lateinit var pageTimeline: View
     private lateinit var tvTitleBar: TextView
     private lateinit var fab: FloatingActionButton
+    private lateinit var btnToggleAll: TextView
 
     companion object {
         private const val REQ_EXPORT = 1001
@@ -50,12 +46,14 @@ class MainActivity : AppCompatActivity() {
         applyThemeMode()
         setContentView(R.layout.activity_main)
         // 品牌蓝 header 垫在状态栏后面（Android 15 edge-to-edge 兼容）——
-        // insets 加到整个 headerBar 上，保证标题与排序按钮都在状态栏之下
-        SystemBarsHelper.applyWithHeader(this, findViewById(R.id.headerBar))
+        // insets 加到整个 headerBar 上，保证标题与排序按钮都在状态栏之下；
+        // 额外 12dp 下移标题区，使上下留白均衡（原先上紧下松）
+        SystemBarsHelper.applyWithHeader(
+            this, findViewById(R.id.headerBar), (12 * resources.displayMetrics.density + 0.5f).toInt()
+        )
 
         tvEmpty = findViewById(R.id.tvEmpty)
         pageReminders = findViewById(R.id.pageReminders)
-        pageStats = findViewById(R.id.pageStats)
         pageSettings = findViewById(R.id.pageSettings)
         pageTimeline = findViewById(R.id.pageTimeline)
         tvTitleBar = findViewById(R.id.tvTitleBar)
@@ -70,6 +68,10 @@ class MainActivity : AppCompatActivity() {
             btnSort.setImageResource(if (asc) R.drawable.ic_sort_asc else R.drawable.ic_sort_desc)
             refresh()
         }
+
+        // 一键关闭/开启全部提醒：全部启用时显示“全部停用”，否则显示“全部启用”
+        btnToggleAll = findViewById(R.id.btnToggleAll)
+        btnToggleAll.setOnClickListener { toggleAll() }
 
         adapter = ReminderAdapter(
             onToggle = { r -> toggle(r) },
@@ -105,11 +107,6 @@ class MainActivity : AppCompatActivity() {
                     showPage("reminders")
                     true
                 }
-                R.id.nav_stats -> {
-                    showPage("stats")
-                    refreshStats()
-                    true
-                }
                 R.id.nav_timeline -> {
                     showPage("timeline")
                     refreshTimeline()
@@ -125,7 +122,6 @@ class MainActivity : AppCompatActivity() {
         // 先显式 showPage 再同步选中项：selectedItemId 与当前一致时不会触发监听
         showPage(startPage)
         nav.selectedItemId = when (startPage) {
-            "stats" -> R.id.nav_stats
             "timeline" -> R.id.nav_timeline
             "settings" -> R.id.nav_settings
             else -> R.id.nav_reminders
@@ -142,30 +138,31 @@ class MainActivity : AppCompatActivity() {
     private fun showPage(page: String) {
         currentPage = page
         val reminders = page == "reminders"
-        val stats = page == "stats"
         pageReminders.visibility = if (reminders) View.VISIBLE else View.GONE
-        pageStats.visibility = if (stats) View.VISIBLE else View.GONE
         pageTimeline.visibility = if (page == "timeline") View.VISIBLE else View.GONE
         pageSettings.visibility = if (page == "settings") View.VISIBLE else View.GONE
         fab.visibility = if (reminders) View.VISIBLE else View.GONE
         // INVISIBLE 而非 GONE：占位保持 40dp 行高，四个 Tab 的 header 高度完全一致
         findViewById<ImageView>(R.id.btnSort).visibility =
             if (reminders) View.VISIBLE else View.INVISIBLE
+        btnToggleAll.visibility =
+            if (reminders && ReminderStore.loadReminders(this).isNotEmpty()) View.VISIBLE else View.INVISIBLE
         tvTitleBar.text = when (page) {
-            "stats" -> getString(R.string.stats)
             "timeline" -> "时间线"
             "settings" -> "设置"
             else -> getString(R.string.app_name)
         }
     }
 
-    /** 时间线：未来 7 天的触发计划；批量出队（默认）从今天 00:00 起算并标注打卡状态，立即出队则只显示未触发条目 */
+    /** 时间线：显示 N 个自然日的触发计划（N=设置项 1-7，默认 7，1=仅当天）；批量出队（默认）从今天 00:00 起算并标注打卡状态，立即出队则只显示未触发条目 */
     private fun refreshTimeline() {
         val now = java.time.LocalDateTime.now()
         val batch = SettingsStore.timelineBatchDequeue(this)
         val start = if (batch) java.time.LocalDate.now().atStartOfDay() else now
+        val until = java.time.LocalDate.now().atStartOfDay()
+            .plusDays(SettingsStore.timelineDays(this).toLong())
         val items = OccurrenceCalculator.upcoming(
-            ReminderStore.loadReminders(this), start, now.plusDays(7)
+            ReminderStore.loadReminders(this), start, until
         )
         // 打卡记录按 (reminderId, 触发时间同小时) 归并：用于时间线区分已完成/已跳过
         val logs = if (batch) ReminderStore.loadLogs(this) else emptyList()
@@ -236,10 +233,39 @@ class MainActivity : AppCompatActivity() {
             refreshTimeline()
         }
 
+        // 时间线显示天数：1（仅当天）~ 7，选择后即时刷新时间线
+        val actDays = findViewById<TextView>(R.id.actTimelineDays)
+        fun syncDays() { actDays.text = "${SettingsStore.timelineDays(this)} 天" }
+        syncDays()
+        actDays.setOnClickListener {
+            val labels = (1..7).map { if (it == 1) "1 天（仅当天）" else "$it 天" }.toTypedArray()
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("时间线显示天数")
+                .setItems(labels) { _, which ->
+                    prefs.edit().putInt(SettingsStore.KEY_TIMELINE_DAYS, which + 1).apply()
+                    syncDays()
+                    refreshTimeline()
+                }
+                .show()
+        }
+
         // 导出：系统"保存文件"对话框；同时提供复制到剪贴板
         findViewById<TextView>(R.id.btnExport).setOnClickListener { exportReminders() }
         // 导入：系统文件选择器或粘贴文本，解析预览后按 追加/覆盖/替换 三模式写入
         findViewById<TextView>(R.id.btnImport).setOnClickListener { importReminders() }
+        // AI 生成：复制内置 Prompt，让 AI 按导入格式生成提醒 JSON
+        findViewById<TextView>(R.id.btnCopyPrompt).setOnClickListener {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("dailyrhythm_prompt", importPrompt()))
+            android.widget.Toast.makeText(this, "Prompt 已复制，粘贴给 AI 即可", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        // TODO: 过渡功能，未来版本移除此入口
+        // 旧格式转换：复制转换 Prompt，让 AI 把 v1 平铺 JSON 转为 v2 分组格式
+        findViewById<TextView>(R.id.btnCopyMigratePrompt).setOnClickListener {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("dailyrhythm_migrate_prompt", migratePrompt()))
+            android.widget.Toast.makeText(this, "转换 Prompt 已复制，粘贴旧 JSON 给 AI 即可", android.widget.Toast.LENGTH_SHORT).show()
+        }
 
         // 外观三选一：跟随系统/浅色/深色，选择即写偏好并即时切换（无需重启）
         val actTheme = findViewById<TextView>(R.id.actTheme)
@@ -324,6 +350,21 @@ class MainActivity : AppCompatActivity() {
         val list = ReminderStore.loadReminders(this).sortedWith(if (asc) cmp else cmp.reversed())
         adapter.submit(list)
         tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+        // 同步一键开关按钮：有数据且在提醒页才显示；有任一启用→“全部停用”，否则“全部启用”
+        btnToggleAll.text = if (list.any { it.enabled }) "全部停用" else "全部启用"
+        btnToggleAll.visibility =
+            if (list.isNotEmpty() && currentPage == "reminders") View.VISIBLE else View.INVISIBLE
+    }
+
+    /** 一键关闭/开启全部提醒：有任一启用则全部停用，全部停用则全部启用 */
+    private fun toggleAll() {
+        val list = ReminderStore.loadReminders(this)
+        if (list.isEmpty()) return
+        val target = list.none { it.enabled }
+        for (i in list.indices) list[i] = list[i].copy(enabled = target)
+        ReminderStore.saveReminders(this, list)
+        AlarmScheduler.rescheduleAll(this)
+        refresh()
     }
 
     /** 外观模式 → AppCompatDelegate 夜间模式，选择即时生效 */
@@ -338,11 +379,66 @@ class MainActivity : AppCompatActivity() {
 
     // ===== 导入/导出 =====
 
-    private val gson = com.google.gson.Gson()
+    /** 内置 Prompt：让 AI 按 v2 分组格式生成提醒 JSON（不含 id/createdAt/photo，系统自动分配） */
+    private fun importPrompt(): String = """
+        你是「作息提醒 DailyRhythm」（Android 作息/用药提醒 App）的数据生成助手。用户会用自然语言描述想要的提醒，请生成可直接导入该 App 的 JSON 数组。
+
+        规则：
+        1. 只输出一个 JSON 数组，不要 Markdown 代码块标记，不要任何解释文字。
+        2. 不要输出 id、createdAt、photo 字段——系统会自动生成，AI 无法知道这些值。
+        3. 每条提醒的字段（可省字段仅在偏离默认值时输出，保持精简）：
+        {
+          "title": "喝药",            // 必填，提醒名称
+          "date": "2026-09-29",       // 可省，yyyy-MM-dd 基准日期，缺省为今天
+          "note": "饭后",             // 可省，备注，空则不写
+          "repeat": { ... },          // 必填，模式对象（见下）
+          "strength": "alarm",        // 可省，notification（默认，不写）/ alarm
+          "enabled": false            // 可省，true（默认）不写，仅停用时写 false
+        }
+        4. repeat 四种模式，只写自己需要的字段：
+        {"type":"daily","times":["08:00","20:00"]}              // 每天，times 至少 1 个
+        {"type":"weekly","days":[1,2,3,4,5],"times":["21:00"]}  // 按星期，days 1=周一 … 7=周日
+        {"type":"interval","every":2,"time":"08:00"}            // 每隔 N 天，every >= 2
+        {"type":"once","time":"19:30"}                          // 仅一次
+        5. 时间必须是 24 小时制 HH:mm（补零，如 08:05）；日期必须是 yyyy-MM-dd 且不早于今天（今天是 {TODAY}），用户没给日期就用今天。
+        6. 不支持的周期（如每月一次）选最接近的模式，并在 note 中注明原意。
+        7. 导入时选择「追加」模式，多条提醒之间无需任何关联。
+
+        示例（每天两次吃药强提醒 / 每周三复盘 / 隔天维生素 / 一次性体检）：
+        [{"title":"吃药","date":"{TODAY}","note":"饭后","repeat":{"type":"daily","times":["08:00","20:00"]},"strength":"alarm"},{"title":"周复盘","repeat":{"type":"weekly","days":[3],"times":["21:00"]}},{"title":"维生素","date":"{TODAY}","repeat":{"type":"interval","every":2,"time":"09:00"}},{"title":"体检","date":"{TODAY}","repeat":{"type":"once","time":"08:30"},"strength":"alarm"}]
+    """.trimIndent().replace("{TODAY}", java.time.LocalDate.now().toString())
+
+    // TODO: 过渡功能，未来版本移除此 prompt 与「旧格式转换」按钮
+    /** 内置 Prompt：把旧版平铺格式 JSON 转换为 v2 分组格式（保留 id/createdAt 等原值） */
+    private fun migratePrompt(): String = """
+        你是「作息提醒 DailyRhythm」的 JSON 格式转换器。用户会粘贴旧版（平铺字段）格式的提醒 JSON 数组，请转换为新版分组格式。
+
+        规则：
+        1. 只输出转换后的 JSON 数组，不要解释文字，不要 Markdown 代码块标记。
+        2. 数据只转换、不修改：标题、备注、日期、时间一律照抄。
+        3. 字段映射：
+        - startDate → date；photoName → photo（空串则省略 photo）
+        - repeatType → repeat.type（daily/weekly/interval/once 不变）
+        - daily：timesOfDay → repeat.times
+        - weekly：weekDays → repeat.days，timesOfDay → repeat.times
+        - interval：intervalDays → repeat.every，startTime → repeat.time
+        - once：startTime → repeat.time
+        - title、note、strength、enabled 同名保留
+        - id、createdAt 原样保留（同设备恢复数据的关键，不要改写）
+        4. 删除已无意义的旧字段：repeatType、startDate、startTime、timesOfDay、weekDays、intervalDays、photoName。
+        5. 若输入已含 repeat 对象（新格式），原样输出。
+        6. 每条提醒只保留它所属模式需要的 repeat 字段，其余模式字段一律删除。
+
+        旧格式示例：
+        [{"id":1,"title":"吃药","note":"饭后","repeatType":"daily","startDate":"2026-09-28","startTime":"08:00","timesOfDay":["08:00","20:00"],"weekDays":[1],"intervalDays":2,"strength":"alarm","photoName":"","enabled":true,"createdAt":100}]
+        对应新格式输出：
+        [{"id":1,"title":"吃药","note":"饭后","date":"2026-09-28","repeat":{"type":"daily","times":["08:00","20:00"]},"strength":"alarm","createdAt":100}]
+    """.trimIndent()
+
     private var pendingImport: List<Reminder>? = null
 
     private fun exportReminders() {
-        val json = gson.toJson(ReminderStore.loadReminders(this))
+        val json = ReminderJson.toJson(ReminderStore.loadReminders(this))
         val choices = arrayOf("保存到文件…", "复制到剪贴板")
         AlertDialog.Builder(this)
             .setTitle("导出提醒（共 ${ReminderStore.loadReminders(this).size} 条）")
@@ -401,22 +497,45 @@ class MainActivity : AppCompatActivity() {
 
     /** 解析并弹预览：条数+标题列表，选模式写入（替换需二次确认） */
     private fun showImportPreview(json: String) {
-        val parsed = runCatching {
-            val type = object : com.google.gson.reflect.TypeToken<List<Reminder>>() {}.type
-            gson.fromJson<List<Reminder>>(json, type) ?: emptyList()
-        }.getOrElse {
-            android.widget.Toast.makeText(this, "解析失败：不是有效的提醒 JSON", android.widget.Toast.LENGTH_LONG).show()
-            return
-        }
+        val result = ReminderJson.fromJson(json)
+        val parsed = result.reminders
         if (parsed.isEmpty()) {
-            android.widget.Toast.makeText(this, "文件中没有提醒", android.widget.Toast.LENGTH_SHORT).show()
+            val why = result.errors.take(3).joinToString("\n")
+            android.widget.Toast.makeText(
+                this,
+                if (why.isEmpty()) "文件中没有提醒" else "解析失败：\n$why",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
             return
         }
-        val preview = parsed.joinToString("\n") { "• ${it.title}（${it.timesOfDay.joinToString("/")}）" }
-        val modes = arrayOf("追加到现有提醒", "按 id 覆盖（同 id 更新，新 id 追加）", "完全替换（清空后导入）")
+        val preview = parsed.joinToString("\n") { "• ${importPreviewLine(it)}" }
+        val errNote = if (result.errors.isEmpty()) "" else
+            "\n\n⚠ ${result.errors.size} 条无效已跳过：\n" + result.errors.take(3).joinToString("\n") +
+                if (result.errors.size > 3) "\n…" else ""
+        // 预览与模式选择拆成两段：部分 ROM 上 setMessage+setItems 共存时列表不渲染（导入模式选不了）
         AlertDialog.Builder(this)
             .setTitle("发现 ${parsed.size} 条提醒")
-            .setMessage(if (preview.length > 1200) preview.take(1200) + "\n…" else preview)
+            .setMessage((if (preview.length > 1200) preview.take(1200) + "\n…" else preview) + errNote)
+            .setPositiveButton("选择导入方式") { _, _ -> showImportModeDialog(parsed) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /** 预览行：时间按模式取（daily/weekly 用 timesOfDay，interval/once 用 startTime） */
+    private fun importPreviewLine(r: Reminder): String {
+        val whenStr = when (r.repeatType) {
+            RepeatType.DAILY, RepeatType.WEEKLY -> r.timesOfDay.joinToString("/")
+            RepeatType.INTERVAL -> "每 ${r.intervalDays} 天 ${r.startTime}"
+            RepeatType.ONCE -> "${r.startDate} ${r.startTime}"
+        }
+        return "${r.title}（$whenStr）"
+    }
+
+    /** 第二段：纯 setItems 选导入模式（替换需二次确认） */
+    private fun showImportModeDialog(parsed: List<Reminder>) {
+        val modes = arrayOf("追加到现有提醒", "按 id 覆盖（同 id 更新，新 id 追加）", "完全替换（清空后导入）")
+        AlertDialog.Builder(this)
+            .setTitle("导入方式")
             .setItems(modes) { _, which ->
                 if (which == 2) {
                     AlertDialog.Builder(this)
@@ -465,7 +584,7 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             REQ_EXPORT -> runCatching {
                 contentResolver.openOutputStream(data.data!!)?.use { os ->
-                    os.write(gson.toJson(ReminderStore.loadReminders(this)).toByteArray())
+                    os.write(ReminderJson.toJson(ReminderStore.loadReminders(this)).toByteArray())
                 }
                 android.widget.Toast.makeText(this, "已导出", android.widget.Toast.LENGTH_SHORT).show()
             }.onFailure {
@@ -476,75 +595,6 @@ class MainActivity : AppCompatActivity() {
                 if (json != null) showImportPreview(json)
             }.onFailure {
                 android.widget.Toast.makeText(this, "读取失败：${it.message}", android.widget.Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    /** 统计逻辑由原 StatsActivity 迁入 */
-    private fun refreshStats() {
-        val logs = ReminderStore.loadLogs(this)
-        val reminders = ReminderStore.loadReminders(this)
-        val today = LocalDate.now()
-        val zone = ZoneId.systemDefault()
-
-        var expected = 0
-        var taken = 0
-        for (r in reminders) {
-            for (i in 0..6) {
-                val d = today.minusDays(i.toLong())
-                val count = countOccurrencesOn(r, d)
-                if (count <= 0) continue
-                expected += count
-                val dayStart = d.atStartOfDay(zone).toInstant().toEpochMilli()
-                val dayEnd = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-                taken += logs.count {
-                    it.reminderId == r.id && it.taken && it.time >= dayStart && it.time < dayEnd
-                }.coerceAtMost(count)
-            }
-        }
-
-        val rate = if (expected == 0) 0 else (taken * 100 / expected)
-        findViewById<TextView>(R.id.tvRate).text = "$rate%"
-        findViewById<TextView>(R.id.tvDetail).text = "近 7 天：应提醒 $expected 次，已执行 $taken 次"
-
-        val recent = logs.sortedByDescending { it.time }.take(20)
-        findViewById<TextView>(R.id.tvRecent).text = if (recent.isEmpty()) "暂无记录"
-        else recent.joinToString("\n") { log ->
-            val dt = Instant.ofEpochMilli(log.time).atZone(zone)
-                .format(DateTimeFormatter.ofPattern("MM-dd HH:mm"))
-            "${if (log.taken) "✔" else "✘"} ${log.title}  $dt"
-        }
-    }
-
-    /** 计算 reminder 在指定日期会触发的次数（过未来时间点不计） */
-    private fun countOccurrencesOn(r: Reminder, date: LocalDate): Int {
-        val now = java.time.LocalDateTime.now()
-        return when (r.repeatType) {
-            RepeatType.ONCE ->
-                if (OccurrenceCalculator.parseDate(r.startDate) == date) 1 else 0
-            RepeatType.DAILY -> {
-                if (date.isBefore(OccurrenceCalculator.parseDate(r.startDate))) 0
-                else r.timesOfDay.count { t ->
-                    date.atTime(OccurrenceCalculator.parseTime(t)).isBefore(now)
-                }
-            }
-            RepeatType.WEEKLY -> {
-                if (date.isBefore(OccurrenceCalculator.parseDate(r.startDate)) ||
-                    date.dayOfWeek.value !in r.weekDays
-                ) 0
-                else r.timesOfDay.count { t ->
-                    date.atTime(OccurrenceCalculator.parseTime(t)).isBefore(now)
-                }
-            }
-            RepeatType.INTERVAL -> {
-                val start = OccurrenceCalculator.parseDate(r.startDate)
-                val step = r.intervalDays.coerceAtLeast(1).toLong()
-                if (date.isBefore(start)) 0
-                else {
-                    val days = java.time.temporal.ChronoUnit.DAYS.between(start, date)
-                    if (days % step != 0L) 0
-                    else if (date.atTime(OccurrenceCalculator.parseTime(r.startTime)).isBefore(now)) 1 else 0
-                }
             }
         }
     }
