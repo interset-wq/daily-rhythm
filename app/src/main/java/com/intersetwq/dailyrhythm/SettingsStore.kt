@@ -19,6 +19,8 @@ object SettingsStore {
     const val KEY_TIMELINE_BATCH_DEQUEUE = "timeline_batch_dequeue"
     /** 提醒列表排序：true=按下次触发时间升序（默认），false=降序 */
     const val KEY_REMINDER_SORT_ASC = "reminder_sort_asc"
+    /** 外观模式：0=跟随系统（默认）1=浅色 2=深色 */
+    const val KEY_THEME_MODE = "theme_mode"
 
     fun defaults(ctx: Context): android.content.SharedPreferences =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -42,4 +44,8 @@ object SettingsStore {
     /** 提醒列表是否按下次触发时间升序（默认 true） */
     fun reminderSortAsc(ctx: Context): Boolean =
         defaults(ctx).getBoolean(KEY_REMINDER_SORT_ASC, true)
+
+    /** 外观模式：0=跟随系统（默认）1=浅色 2=深色 */
+    fun themeMode(ctx: Context): Int =
+        defaults(ctx).getInt(KEY_THEME_MODE, 0)
 }

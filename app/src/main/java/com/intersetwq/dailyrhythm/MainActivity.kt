@@ -42,6 +42,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 启动即应用保存的外观偏好（跟随系统/浅色/深色）
+        applyThemeMode()
         setContentView(R.layout.activity_main)
         // 品牌蓝 header 垫在状态栏后面（Android 15 edge-to-edge 兼容）——
         // insets 加到整个 headerBar 上，保证标题与排序按钮都在状态栏之下
@@ -217,6 +219,25 @@ class MainActivity : AppCompatActivity() {
         // 导入：系统文件选择器或粘贴文本，解析预览后按 追加/覆盖/替换 三模式写入
         findViewById<TextView>(R.id.btnImport).setOnClickListener { importReminders() }
 
+        // 外观三选一：跟随系统/浅色/深色，选择即写偏好并即时切换（无需重启）
+        val actTheme = findViewById<TextView>(R.id.actTheme)
+        val themeLabels = arrayOf("跟随系统", "浅色", "深色")
+        val syncTheme = {
+            actTheme.text = themeLabels[SettingsStore.themeMode(this).coerceIn(0, 2)]
+        }
+        syncTheme()
+        actTheme.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("外观")
+                .setItems(themeLabels) { _, which ->
+                    prefs.edit().putInt(SettingsStore.KEY_THEME_MODE, which).apply()
+                    syncTheme()
+                    applyThemeMode()
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+
         // 版本号
         runCatching {
             val ver = packageManager.getPackageInfo(packageName, 0).versionName
@@ -290,6 +311,16 @@ class MainActivity : AppCompatActivity() {
         )
         adapter.submit(list)
         tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    /** 外观模式 → AppCompatDelegate 夜间模式，选择即时生效 */
+    private fun applyThemeMode() {
+        val mode = when (SettingsStore.themeMode(this)) {
+            1 -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            2 -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(mode)
     }
 
     // ===== 导入/导出 =====

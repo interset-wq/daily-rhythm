@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 标准深色（Material Dark）：#121212 底 + #1E1E1E 卡片，品牌蓝提亮保证对比度 -->
+    <color name="brand_primary">#64B5F6</color>
+    <color name="brand_primary_dark">#42A5F5</color>
+    <color name="brand_primary_light">#263238</color>
+    <color name="bg_page">#121212</color>
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#9AA3AD</color>
+    <color name="card_stroke">#2C2C2C</color>
+    <color name="danger">#EF5350</color>
+
+    <color name="on_brand">#0D1B2A</color>
+    <color name="card_bg">#1E1E1E</color>
+    <color name="accent_blue">#64B5F6</color>
+    <color name="accent_blue_light">#64B5F6</color>
+    <color name="success">#66BB6A</color>
+    <color name="warning">#FFD54F</color>
+    <color name="timeline_line">#64B5F6</color>
+</resources>

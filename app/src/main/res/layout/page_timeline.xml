@@ -12,7 +12,7 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="未来 7 天暂无计划"
-        android:textColor="#9E9E9E"
+        android:textColor="@color/text_secondary"
         android:textSize="16sp"
         android:visibility="gone" />
 

@@ -13,7 +13,7 @@
             android:layout_width="2dp"
             android:layout_height="match_parent"
             android:layout_gravity="center_horizontal"
-            android:background="#90CAF9" />
+            android:background="@color/timeline_line" />
 
         <View
             android:id="@+id/timelineDot"
@@ -48,7 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="08:00"
-                android:textColor="#1565C0"
+                android:textColor="@color/accent_blue"
                 android:textSize="17sp"
                 android:textStyle="bold" />
 
@@ -59,7 +59,7 @@
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:text="1小时后"
-                android:textColor="#1565C0"
+                android:textColor="@color/accent_blue"
                 android:textSize="12sp" />
 
             <TextView
@@ -81,7 +81,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="标题"
-            android:textColor="#212121"
+            android:textColor="@color/text_primary"
             android:textSize="15sp" />
 
         <TextView
@@ -90,7 +90,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text=""
-            android:textColor="#757575"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:visibility="gone" />
     </LinearLayout>

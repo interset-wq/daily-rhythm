@@ -51,7 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginTop="16dp"
-        android:backgroundTint="#1565C0"
+        android:backgroundTint="@color/accent_blue"
         android:text="10分钟后再提醒"
         android:textColor="#FFFFFF"
         android:textSize="18sp" />

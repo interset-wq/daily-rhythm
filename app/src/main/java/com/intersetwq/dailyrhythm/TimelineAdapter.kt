@@ -124,11 +124,12 @@ class TimelineAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     else -> countdown(row.time)
                 }
                 // 已到点条目整体置灰（0:00 随当日结束批量出队）
-                val grayColor = 0xFF9AA3AD.toInt()
-                val normalColor = 0xFF1565C0.toInt()
+                val ctx = h.itemView.context
+                val grayColor = androidx.core.content.ContextCompat.getColor(ctx, R.color.text_secondary)
+                val normalColor = androidx.core.content.ContextCompat.getColor(ctx, R.color.accent_blue)
                 h.tvTime.setTextColor(if (gray) grayColor else normalColor)
                 h.tvCountdown.setTextColor(grayColor)
-                h.tvTitle.setTextColor(if (gray) grayColor else 0xFF1C1F26.toInt())
+                h.tvTitle.setTextColor(if (gray) grayColor else androidx.core.content.ContextCompat.getColor(ctx, R.color.text_primary))
                 h.tvNote.setTextColor(grayColor)
                 h.tvBadge.alpha = if (gray) 0.4f else 1f
                 h.tvBadge.visibility = if (row.reminder.strength == AlarmStrength.FULL_ALARM) View.VISIBLE else View.GONE

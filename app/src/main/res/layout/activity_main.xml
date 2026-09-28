@@ -13,13 +13,11 @@
         <LinearLayout
             android:id="@+id/headerBar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="56dp"
+            android:layout_height="64dp"
             android:background="@color/brand_primary"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingBottom="10dp">
+            android:paddingHorizontal="20dp">
 
             <TextView
                 android:id="@+id/tvTitleBar"
@@ -27,7 +25,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/app_name"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/on_brand"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -40,7 +38,7 @@
                 android:padding="8dp"
                 android:src="@drawable/ic_sort_asc"
                 android:visibility="gone"
-                app:tint="#FFFFFF" />
+                android:tint="@color/on_brand" />
         </LinearLayout>
 
         <!-- Tab 1：提醒列表 -->
@@ -78,7 +76,7 @@
                 android:src="@drawable/ic_add"
                 app:backgroundTint="@color/brand_primary"
                 app:shapeAppearanceOverlay="@style/ShapeCircle"
-                app:tint="#FFFFFF" />
+                app:tint="@color/on_brand" />
         </FrameLayout>
 
         <!-- Tab 2：统计 -->
@@ -148,7 +146,7 @@
             android:id="@+id/bottomNav"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FFFFFF"
+            android:background="@color/card_bg"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/bottom_nav_menu" />
     </LinearLayout>

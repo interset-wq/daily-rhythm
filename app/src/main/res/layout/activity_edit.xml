@@ -13,13 +13,11 @@
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="56dp"
+            android:layout_height="64dp"
             android:background="@color/brand_primary"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
-            android:paddingBottom="10dp">
+            android:paddingHorizontal="8dp">
 
             <ImageButton
                 android:id="@+id/btnBack"
@@ -28,7 +26,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/back"
                 android:src="@drawable/ic_back"
-                app:tint="#FFFFFF"
+                app:tint="@color/on_brand"
                 xmlns:app="http://schemas.android.com/apk/res-auto" />
 
             <TextView
@@ -38,7 +36,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="新建提醒"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/on_brand"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -254,7 +252,7 @@
                     android:background="?attr/selectableItemBackground"
                     android:padding="8dp"
                     android:text="2026-01-01"
-                    android:textColor="#1565C0" />
+                    android:textColor="@color/accent_blue" />
             </LinearLayout>
 
             <LinearLayout
@@ -275,7 +273,7 @@
                     android:background="?attr/selectableItemBackground"
                     android:padding="8dp"
                     android:text="08:00"
-                    android:textColor="#1565C0" />
+                    android:textColor="@color/accent_blue" />
             </LinearLayout>
 
             <!-- 仅一次：时间 -->
@@ -298,7 +296,7 @@
                     android:background="?attr/selectableItemBackground"
                     android:padding="8dp"
                     android:text="08:00"
-                    android:textColor="#1565C0" />
+                    android:textColor="@color/accent_blue" />
             </LinearLayout>
 
             <!-- 强度 -->
@@ -325,7 +323,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="锁屏响铃，需手动停止；关闭则为普通通知"
-                        android:textColor="#757575"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -370,7 +368,7 @@
                     android:layout_weight="1"
                     android:backgroundTint="#E53935"
                     android:text="@string/delete"
-                    android:textColor="#FFFFFF" />
+                    android:textColor="@color/on_brand" />
 
                 <Button
                     android:id="@+id/btnSave"
