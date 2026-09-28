@@ -1,38 +1,39 @@
-# AGENTS.md — MedReminder（用药提醒 Android 应用）
+# AGENTS.md — DailyRhythm (Daily Routine Reminder Android App)
 
-原生 Android 应用（Kotlin + View 体系，无 Compose、无第三方 UI 框架）。
+Native Android app (Kotlin + View system, no Compose, no third-party UI frameworks).
 
-## 构建命令
+## Build Commands
 
-- 本机**没有**安装独立 Gradle，也没有可执行的 gradlew（仓库只提交了 wrapper properties，未提交 wrapper jar）。用本机缓存直接调用：
+- This machine has **no standalone Gradle and no working gradlew** (the repo commits only the wrapper properties, not the wrapper jar). Use the local cached Gradle directly:
   `C:/Users/d111k/.gradle/wrapper/dists/gradle-8.14.4-bin/92wwslzcyst3phie3o264zltu/gradle-8.14.4/bin/gradle assembleDebug --no-daemon -q`
-- 构建成功时**无任何输出**；产物在 `app/build/outputs/apk/debug/app-debug.apk`。
-- SDK 路径写死在 `local.properties`（`sdk.dir=D:\androidSDK`），该文件被 gitignore，新环境需手动创建。
-- 依赖走阿里云镜像（`settings.gradle.kts`）。无测试、无 lint 配置——验证手段就是编译通过 + 模拟器实测。
+- Invoke via the call operator with the `.bat` file (`& "C:\...\gradle.bat"`); the bare extensionless binary silently fails with no output. **A successful build prints nothing**; the APK lands in `app/build/outputs/apk/debug/app-debug.apk`.
+- Requires JDK 17; `compileSdk 35` / `minSdk 26` / `targetSdk 35`. The SDK path is hardcoded in `local.properties` (`sdk.dir=D:\androidSDK`), which is gitignored — recreate it on a new machine.
+- Dependencies resolve through Aliyun mirrors (`settings.gradle.kts`). No tests, no lint config — verification = build succeeds + manual device testing.
 
-## 架构（单模块，全部在 `app/src/main/java/com/intersetwq/dailyrhythm/`）
+## Architecture (single module, all in `app/src/main/java/com/intersetwq/dailyrhythm/`)
 
-- **数据层**：`ReminderStore`（Gson JSON 存 `files/reminders.json`、`dose_logs.json`，无 Room/SQLite）、`SettingsStore`（SharedPreferences，键：默认强提醒/通知声音/稍后时长/时间线批量出队/排序方向/外观模式）、`Reminder.kt`（模型，时间统一用"当天 00:00 起的分钟数"思想存 `HH:mm` 字符串）。
-- **调度核心**：`OccurrenceCalculator`（四种重复模式的"下一次触发"纯计算，无 Android 依赖，改调度逻辑先改这里）、`AlarmScheduler`（AlarmManager 精确闹钟，触发后滚动排下一次）、`AlarmReceiver`/`BootReceiver`。
-- **提醒呈现**：`strength` 字段决定走普通通知（`AlarmNotifier`）还是全屏闹钟（`AlarmActivity`）。
-- **UI**：MainActivity 单 Activity 四个内页 Tab（提醒列表/统计/时间线/设置），统计与时间线是主界面内嵌 View，不是独立 Activity；`EditReminderActivity`、`AlarmActivity` 独立。导入导出、外观切换（`AppCompatDelegate.setDefaultNightMode`）均在 MainActivity。
+- **Data layer**: `ReminderStore` (stores `files/reminders.json` and `dose_logs.json`; no Room/SQLite), `ReminderJson` (the **only** codec for reminders: **v2 grouped format** `{"title","date","repeat":{"type":...},...}` that serializes only the fields each repeat mode needs; lenient parsing that skips bad entries with per-entry errors; also reads legacy v1 flat data for migration — internal storage and import/export share this codec; `dose_logs.json` still goes through plain Gson), `SettingsStore` (SharedPreferences; keys: default strong reminder / notification sound / snooze duration / timeline batch dequeue / sort direction / theme mode), `Reminder.kt` (model; times stored as `HH:mm` strings following a "minutes since local midnight" convention).
+- **Scheduling core**: `OccurrenceCalculator` (pure next-trigger computation for the four repeat modes, no Android dependencies — change scheduling logic here first), `AlarmScheduler` (exact alarms via `AlarmManager.setExactAndAllowWhileIdle`/`setAlarmClock`, rolls the next occurrence after firing), `AlarmReceiver`/`BootReceiver`.
+- **Reminder presentation**: the `strength` field routes to a normal notification (`AlarmNotifier`) vs a fullscreen alarm (`AlarmActivity`).
+- **UI**: MainActivity is a single activity hosting four inner tabs (reminder list / stats / timeline / settings) — stats and timeline are embedded views, not separate activities; `EditReminderActivity` and `AlarmActivity` are standalone. Import/export and theme switching (`AppCompatDelegate.setDefaultNightMode`) live in MainActivity. Import is a **two-step dialog** (preview → choose merge mode); do not merge `setMessage` and `setItems` into one dialog — on some ROMs the items list silently fails to render. The settings page also has an "AI generate" card with two clipboard-Prompt buttons: `生成 Prompt` (permanent, generates v2 JSON without id/createdAt/photo) and `旧格式转新` (transitional legacy→v2 converter, marked `TODO` for removal in a future version).
 
-## 视觉规范
+## Visual conventions
 
-- 配色对齐 GitHub Mobile（Primer）：浅色 `#F6F8FA` 画布 + 白卡片 + `#0969DA` 强调；深色（`values-night`）`#0D1117` 画布 + `#161B22` 卡片 + `#58A6FF` 强调。
-- **颜色必须走 `@color/` 语义引用**（`bg_page`/`card_bg`/`text_primary`/`text_secondary`/`accent_blue`/`on_brand`/`danger` 等），禁止在布局/代码里硬编码色值，否则深色模式会漏适配。闹钟全屏页（`activity_alarm.xml`）例外，刻意保持常黑。
-- header（主页 `headerBar`、编辑页 `topBar`）为品牌蓝底，内容区 `wrap_content + minHeight 72dp` + 12dp 底部 padding，由 `SystemBarsHelper.applyWithHeader` 垫进状态栏——**insets 必须接在最外层 header 容器上**，接内层标题会导致旁边的按钮被状态栏遮挡。
+- Colors follow GitHub Mobile (Primer): light `#F6F8FA` canvas + white cards + `#0969DA` accent; dark (`values-night`) `#0D1117` canvas + `#161B22` cards + `#58A6FF` accent.
+- **All colors must go through `@color/` semantic references** (`bg_page`/`card_bg`/`text_primary`/`text_secondary`/`accent_blue`/`on_brand`/`danger` etc.). Never hardcode hex values in layouts or code, or dark mode will break. The fullscreen alarm page (`activity_alarm.xml`) is the deliberate exception — it stays black.
+- The header bar (main `headerBar`, edit-page `topBar`) is brand-blue with content `wrap_content + minHeight 72dp` + 12dp bottom padding, padded under the status bar via `SystemBarsHelper.applyWithHeader` — **insets must attach to the outermost header container**; attaching them to the inner title clips the sibling buttons under the status bar.
 
-## 项目特有注意事项
+## Project-specific gotchas
 
-- **targetSdk 35（Android 15）强制 edge-to-edge**：`window.statusBarColor` 已失效，禁止使用。状态栏处理统一走 `SystemBarsHelper`（insets + header 垫底）。新页面必须接入，否则白色状态栏图标会淹没在浅色背景里。
-- **导航不依赖手势/物理按键**：所有页面必须有屏幕内按钮（底部 Tab、编辑页"← 返回"）。这是明确的可用性需求，不是风格偏好。
-- **FAB 位于提醒页 FrameLayout 内**（不在 CoordinatorLayout 根上），避免遮挡底部导航。
-- 模拟器 `Medium_Phone_API_36.1` 开了 multidisplay 副屏，`adb screencap` 会抓到副屏桌面；验证 UI 用 `uiautomator dump` 读 bounds/text，比截图可靠。
-- 模拟器用 Windows 计划任务 `MedReminderEmulator` 启动（`schtasks //Run //TN "MedReminderEmulator"`，Git Bash 下必须双斜杠）。bash 会话超时会杀掉子进程，禁止用 bash 后台方式起模拟器。
-- `adb push`/`shell` 的绝对路径会被 Git Bash 转成 Windows 路径，命令前加 `MSYS_NO_PATHCONV=1`。
-- 塞测试数据：`adb push` JSON 到 `/data/local/tmp` 后用 `run-as com.intersetwq.dailyrhythm cp` 进 `files/`，再广播 BOOT_COMPLETED 触发重排。
+- **targetSdk 35 (Android 15) enforces edge-to-edge**: `window.statusBarColor` is dead — never use it. Status-bar handling goes through `SystemBarsHelper` (insets + header padding). Every new screen must adopt this, or white status-bar icons will vanish against light backgrounds.
+- **Navigation must not rely on gestures/physical back**: every screen needs an on-screen button (bottom tabs, an explicit "← Back" on the edit page). This is a hard usability requirement, not a style preference.
+- The FAB lives inside the reminders-page `FrameLayout` (not on a `CoordinatorLayout` root) so it does not cover the bottom navigation.
+- The test emulator `Medium_Phone_API_36.1` runs with a multidisplay secondary screen; `adb screencap` captures the secondary desktop instead of the app — verify UI via `uiautomator dump` (bounds/text), not screenshots.
+- Start the emulator with the Windows scheduled task `DailyRhythmEmulator` (`schtasks //Run //TN "DailyRhythmEmulator"` — double slashes under Git Bash). Bash session timeouts kill child processes; never start the emulator in the background from bash.
+- `adb push`/`shell` absolute paths get rewritten to Windows paths by Git Bash — prefix commands with `MSYS_NO_PATHCONV=1`.
+- To seed test data: `adb push` the JSON to `/data/local/tmp`, then `run-as com.intersetwq.dailyrhythm cp` into `files/`, then broadcast `BOOT_COMPLETED` to reschedule.
+- On some devices (e.g. Honor), newly pushed files do not appear in the Storage Access Framework file picker until scanned — trigger with `adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/<name>`.
 
-## 维护规则
+## Maintenance rules
 
-项目结构、构建/测试命令、架构边界、开发约定或本文件记录的其他事实发生变化时，必须在同一次改动中同步更新本文件。
+When the project structure, build/test commands, architecture boundaries, conventions, or any other recorded fact changes, update this file in the same change.
